@@ -1,73 +1,71 @@
-# Welcome to your Lovable project
+# Adani App Connectivity
 
-## Project info
+Professional dashboard for monitoring and managing app connectivity across the Adani ecosystem.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+- **Dynamic Personalized Dashboard**: Real-time overview of business metrics.
+- **Excel Viewer**: Interactive spreadsheet-like grid for data analysis and reporting.
+- **KPI Monitoring**: Tracking Total Revenue, Active Users, and Order statuses.
+- **Reporting**: Advanced charts and data visualization for business insights.
+- **Secure Access**: Protected routes with session management.
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Frontend**: React, TypeScript, Vite
+- **Styling**: Tailwind CSS, Framer Motion
+- **UI Components**: shadcn/ui, Lucide React
+- **Data Handling**: Recharts, PapaParse, XLSX
+- **State Management**: TanStack Query (React Query)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js (v18 or higher)
+- npm or yarn
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. Clone the repository:
+   ```sh
+   git clone https://github.com/Praneeth180502/App-Connectivity.git
+   ```
 
-Follow these steps:
+2. Navigate to the frontend directory:
+   ```sh
+   cd "App Connectivity/frontend"
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+3. Install dependencies:
+   ```sh
+   npm install
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+4. Start the development server:
+   ```sh
+   npm run dev
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Available Scripts
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+- `npm run dev`: Starts the development server.
+- `npm run build`: Builds the application for production.
+- `npm run lint`: Runs ESLint for code quality checks.
+- `npm run test`: Runs unit tests using Vitest.
+
+## Project Structure
+
+```text
+frontend/
+├── public/          # Static assets (images, fonts)
+├── src/
+│   ├── api/         # Hooks & Utility functions
+│   ├── components/  # Reusable UI components
+│   ├── pages/       # Route-level components
+│   ├── index.css    # Global styles
+│   └── index.tsx    # Application entry point
 ```
 
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+---
+© 2026 Adani Group. All rights reserved.
