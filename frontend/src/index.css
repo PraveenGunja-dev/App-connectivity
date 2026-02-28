@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Adani';
+  src: url('/fonts/adani.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --font-adani: 'Adani', system-ui, sans-serif;
+
+    --background: 210 20% 98%;
+    --foreground: 224 71.4% 4.1%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 30% 15%;
+
+    --primary: 245 58% 38%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 14% 96%;
+    --secondary-foreground: 240 30% 15%;
+
+    --muted: 240 14% 96%;
+    --muted-foreground: 240 9% 46%;
+
+    --accent: 198 80% 46%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 340 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 13% 91%;
+    --input: 240 13% 91%;
+    --ring: 280 60% 50%;
+
+    --radius: 0.625rem;
+
+    --sidebar-width: 260px;
+    --header-height: 64px;
+
+    --sidebar-background: 245 58% 28%;
+    --sidebar-foreground: 240 20% 90%;
+    --sidebar-primary: 198 80% 46%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 280 50% 35%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 260 40% 35%;
+    --sidebar-ring: 280 60% 50%;
+    --sidebar-muted: 260 20% 60%;
+
+    --success: 152 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 198 80% 46%;
+    --info-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 4%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 4%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 245 58% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 198 80% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 245 58% 50%;
+
+    --sidebar-background: 240 10% 4%;
+    --sidebar-foreground: 240 5% 96%;
+    --sidebar-primary: 198 80% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 280 40% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 245 58% 50%;
+    --sidebar-muted: 240 5% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-adani);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-adani);
+  }
+}
