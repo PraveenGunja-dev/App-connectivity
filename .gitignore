@@ -1,0 +1,29 @@
+# General
+.DS_Store
+.vscode/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+
+# Data and Databases (Confidential)
+backend/db/*.db
+backend/*.csv
+backend/uploads/
+*.pdf
+*.csv
+
+# Build artifacts
+frontend/dist/
+backend/dist/
+backend/build/

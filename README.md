@@ -13,59 +13,83 @@ Professional dashboard for monitoring and managing app connectivity across the A
 ## Tech Stack
 
 - **Frontend**: React, TypeScript, Vite
+- **Backend**: FastAPI (Python)
 - **Styling**: Tailwind CSS, Framer Motion
 - **UI Components**: shadcn/ui, Lucide React
-- **Data Handling**: Recharts, PapaParse, XLSX
-- **State Management**: TanStack Query (React Query)
+- **Data**: SQLite (from CSV import), TanStack Query
 
-## Getting Started
+## Running the application (single port)
 
-### Prerequisites
+The app runs on **one port**: the backend serves both the API and the frontend static build.
 
-- Node.js (v18 or higher)
-- npm or yarn
+### First-time setup
 
-### Installation
+1. **Backend** (Python venv, dependencies, DB, frontend build):
 
-1. Clone the repository:
-   ```sh
-   git clone https://github.com/Praneeth180502/App-Connectivity.git
+   ```bash
+   cd backend
+   python -m venv .venv
+   .venv\Scripts\activate          # Windows
+   # source .venv/bin/activate     # macOS/Linux
+   pip install -r requirements.txt
    ```
 
-2. Navigate to the frontend directory:
-   ```sh
-   cd "App Connectivity/frontend"
-   ```
+2. **Frontend build** (one-time; from project root):
 
-3. Install dependencies:
-   ```sh
+   ```bash
+   cd frontend
    npm install
+   npm run build
+   cd ..
    ```
 
-4. Start the development server:
-   ```sh
-   npm run dev
+3. **Database** (one-time; from `backend`):
+
+   ```bash
+   cd backend
+   python -m scripts.csv_to_sqlite
    ```
 
-## Available Scripts
+### Run the app
 
-- `npm run dev`: Starts the development server.
-- `npm run build`: Builds the application for production.
-- `npm run lint`: Runs ESLint for code quality checks.
-- `npm run test`: Runs unit tests using Vitest.
+From the `backend` directory (with venv activated):
 
-## Project Structure
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Then open **http://localhost:8000** for the dashboard. API docs: http://localhost:8000/docs  
+
+No need to run the frontend dev server; the backend serves the built frontend.
+
+---
+
+## Project structure
 
 ```text
-frontend/
-├── public/          # Static assets (images, fonts)
-├── src/
-│   ├── api/         # Hooks & Utility functions
-│   ├── components/  # Reusable UI components
-│   ├── pages/       # Route-level components
-│   ├── index.css    # Global styles
-│   └── index.tsx    # Application entry point
+├── backend/           # FastAPI app, serves API + frontend static files
+│   ├── app/
+│   ├── db/            # SQLite database (created by scripts)
+│   └── scripts/       # e.g. csv_to_sqlite.py
+├── frontend/          # React + Vite app (build output in dist/)
+│   ├── src/
+│   └── dist/          # Built files (served by backend)
+└── README.md
 ```
+
+See **backend/README.md** for detailed backend setup, endpoints, and database tables.
+
+## Frontend-only development
+
+To run the frontend dev server (hot reload) separately:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Use the backend on port 8000 for API calls (see backend README for CORS).
 
 ---
 © 2026 Adani Group. All rights reserved.

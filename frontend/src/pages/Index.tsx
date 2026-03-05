@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { KpiCards } from "@/components/KpiCards";
-import { RevenueChart } from "@/components/RevenueChart";
+
 import { ExcelViewer } from "@/components/ExcelViewer";
 import { Button } from "@/components/ui/button";
 import { Upload, Download } from "lucide-react";
@@ -10,48 +9,65 @@ import { useRef } from "react";
 
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const userEmail = localStorage.getItem("userEmail") || "admin@adani.com";
-  const rawName = userEmail.split(/[._@]/)[0];
-  const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (file.type === "application/pdf") {
-        toast.success(`Uploading ${file.name}...`);
-        // Simulating upload process
-        setTimeout(() => {
-          toast.success("PDF uploaded successfully!");
-        }, 2000);
-      } else {
-        toast.error("Please upload a PDF file.");
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      toast.success(`Uploading ${file.name}...`);
+      const token = localStorage.getItem("accessToken");
+
+      const response = await fetch("/api/reports/upload", {
+        method: "POST",
+        headers: token
+          ? {
+              Authorization: `Bearer ${token}`,
+            }
+          : undefined,
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const data: { id: string; filename: string; saved_as: string } = await response.json();
+      toast.success(`PDF uploaded successfully as ${data.saved_as}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Upload failed. Please try again.");
+    } finally {
+      // reset input so same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
     }
   };
 
   const handleDownloadCSV = () => {
-    toast.info("Preparing CSV download...");
+    toast.info("Preparing Report CSV...");
 
-    // Mock CSV data
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + "Name,Revenue,Change,Date\n"
-      + "Total Revenue,$48295,+12.5%,Feb 2026\n"
-      + "Active Users,2847,+8.2%,Feb 2026\n"
-      + "Orders,1423,-3.1%,Feb 2026";
-
-    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "dashboard_report.csv");
+    link.href = "/api/reports/download/csv";
+    link.download = "output_report.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    toast.success("CSV downloaded successfully!");
+    toast.success("Report downloaded successfully!");
   };
 
   return (
@@ -63,25 +79,6 @@ const Index = () => {
         transition={{ duration: 0.5 }}
         className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
       >
-        <div>
-          <motion.h2
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-3xl font-bold tracking-tight text-foreground"
-          >
-            Welcome back, {displayName} 👋
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mt-1 text-muted-foreground"
-          >
-            Here's what's happening across your business today.
-          </motion.p>
-        </div>
-
         <div className="flex flex-wrap items-center gap-3">
           <input
             type="file"
@@ -119,21 +116,18 @@ const Index = () => {
         </div>
       </motion.div>
 
-      {/* Main Sections */}
+      {/* Main Sections (Chart & Viewer) */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4, duration: 0.8 }}
       >
-        <KpiCards />
-
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.6 }}
           className="mt-8 grid gap-8 xl:grid-cols-1"
         >
-          <RevenueChart />
           <ExcelViewer />
         </motion.div>
       </motion.div>

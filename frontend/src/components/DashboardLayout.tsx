@@ -9,6 +9,10 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ title, children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+
+  // Pure hover: collapsed when cursor is away, expanded when cursor is on the sidebar
+  const collapsed = !isSidebarHovered;
 
   return (
     <div className="min-h-screen bg-background">
@@ -17,10 +21,19 @@ export function DashboardLayout({ title, children }: DashboardLayoutProps) {
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
       />
-      <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="lg:pl-[var(--sidebar-width)] transition-all duration-300">
-        <main className="p-4 sm:p-6">{children}</main>
-      </div>
+      <DashboardSidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        collapsed={collapsed}
+        onSidebarHoverChange={setIsSidebarHovered}
+      />
+      <main
+        className={`p-4 sm:p-6 lg:transition-[padding-left] duration-300 ${
+          collapsed ? "lg:pl-[var(--sidebar-width-collapsed)]" : "lg:pl-[var(--sidebar-width)]"
+        }`}
+      >
+        {children}
+      </main>
     </div>
   );
 }

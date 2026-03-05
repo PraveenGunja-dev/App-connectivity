@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-const adaniLogo = "/assets/adani-renewables-logo.jpg";
+const adaniLogo = "/assets/logo.png";
 
 const FloatingBackground = () => {
     return (
@@ -44,25 +44,51 @@ const Login = () => {
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
-        // Any email and password works for now
-        setTimeout(() => {
+        try {
+            const response = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            if (!response.ok) {
+                toast.error("Invalid email or password");
+                return;
+            }
+
+            const data: { access_token: string; token_type: string; user_email: string } = await response.json();
+
+            // Persist auth details for protected routes and API calls
+            localStorage.setItem("accessToken", data.access_token);
+            localStorage.setItem("userEmail", data.user_email);
             localStorage.setItem("isAuthenticated", "true");
-            localStorage.setItem("userEmail", email);
-            setIsLoading(false);
+
             toast.success("Login successful!");
             navigate("/");
-        }, 1000);
+        } catch (error) {
+            console.error(error);
+            toast.error("Login failed. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
-        <div className="relative min-h-screen flex items-center justify-center p-4 bg-background">
+        <div className="relative min-h-screen flex items-center justify-center p-4">
+            <div
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat -z-30"
+                style={{ backgroundImage: "url('/assets/Adani Power Thumbnail-1.webp')" }}
+            />
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] -z-20" />
             <FloatingBackground />
 
-            <div className="w-full max-w-md">
+            <div className="w-full max-w-md relative z-10">
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -73,7 +99,7 @@ const Login = () => {
                         whileHover={{ scale: 1.05 }}
                         src={adaniLogo}
                         alt="Adani Logo"
-                        className="h-20 object-contain drop-shadow-md"
+                        className="h-16 object-contain drop-shadow-md"
                     />
                 </motion.div>
 
@@ -163,7 +189,7 @@ const Login = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.9 }}
-                    className="mt-8 text-center text-sm text-muted-foreground"
+                    className="mt-8 text-center text-sm text-white/70 font-medium"
                 >
                     © {new Date().getFullYear()} Adani Green Energy Limited. All rights reserved.
                 </motion.p>

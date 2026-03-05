@@ -37,7 +37,7 @@ const App = () => (
             <TooltipProvider>
                 <Toaster />
                 <Sonner />
-                <BrowserRouter>
+                <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                     <Suspense fallback={<PageLoader />}>
                         <Routes>
                             <Route path="/login" element={<Login />} />
@@ -58,4 +58,8 @@ const App = () => (
     </ThemeProvider>
 );
 
-createRoot(document.getElementById("root")!).render(<App />);
+const rootElement = document.getElementById("root")!;
+if (!window.hasOwnProperty('__reactRoot')) {
+    (window as any).__reactRoot = createRoot(rootElement);
+}
+(window as any).__reactRoot.render(<App />);
