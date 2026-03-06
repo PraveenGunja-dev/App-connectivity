@@ -43,11 +43,21 @@ The app runs on **one port**: the backend serves both the API and the frontend s
    cd ..
    ```
 
-3. **Database** (one-time; from `backend`):
-
+3. **Database Setup** (PostgreSQL):
+   
+   Ensure PostgreSQL is installed and added to your system PATH.
+   Create a `.env` file in the `backend/` directory referencing your local database:
+   ```env
+   APP_DATABASE_URL="postgresql://postgres:password@localhost:5432/App Connectivity"
+   APP_DB_USER="postgres"
+   APP_DB_PASSWORD="password"
+   APP_DB_HOST="localhost"
+   APP_DB_PORT="5432"
+   APP_DB_NAME="App Connectivity"
+   ```
+   Load the data from the SQL dump into your Postgres database (make sure you create the empty database first):
    ```bash
-   cd backend
-   python -m scripts.csv_to_sqlite
+   psql -U postgres -d "App Connectivity" -f sqlite_dump.sql
    ```
 
 ### Run the app
@@ -55,10 +65,10 @@ The app runs on **one port**: the backend serves both the API and the frontend s
 From the `backend` directory (with venv activated):
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python run_backend.py
 ```
 
-Then open **http://localhost:8000** for the dashboard. API docs: http://localhost:8000/docs  
+Then open **http://localhost:1581** for the dashboard. API docs: http://localhost:1581/docs  
 
 No need to run the frontend dev server; the backend serves the built frontend.
 

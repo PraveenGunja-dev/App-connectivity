@@ -45,23 +45,25 @@ cd ..
 
 This creates `frontend/dist/`. The backend will serve these files so the whole app runs on one port.
 
-### 5. Load the database (from CSV files)
+### 5. Load the database (PostgreSQL)
 
-The app uses a SQLite database. The first time (and whenever you update the CSV files), from the `backend` directory run:
+The app now uses a PostgreSQL database. Ensure PostgreSQL is installed and accessible in your system.
 
+Create a `.env` file in the `backend/` directory using your credentials:
+```env
+APP_DATABASE_URL="postgresql://postgres:password@localhost:5432/App Connectivity"
+APP_DB_USER="postgres"
+APP_DB_PASSWORD="password"
+APP_DB_HOST="localhost"
+APP_DB_PORT="5432"
+APP_DB_NAME="App Connectivity"
+```
+
+To load your initial data from the SQL dump, from the project root directory run:
 ```bash
-python -m scripts.csv_to_sqlite
+psql -U postgres -d "App Connectivity" -f sqlite_dump.sql
 ```
-
-This reads the four CSV files in the `backend` folder and creates `db/connectivity.db`. You should see output like:
-
-```
-Loaded ... rows into data_to_be_captured from ...
-Loaded ... rows into margin from ...
-Loaded ... rows into element_status from ...
-Loaded ... rows into transformation_capacity from ...
-Database written to ...\backend\db\connectivity.db
-```
+This loads all CSV-derived data directly into the tables required by the backend.
 
 ### 6. (Optional) Environment variables
 
@@ -129,17 +131,17 @@ The backend serves the frontend static build from `frontend/dist/`, so you only 
 
 CORS is enabled for `http://localhost:5173` (Vite dev server) by default.
 
-## Database (SQLite)
+## Database (PostgreSQL)
 
-The script in step 4 imports these CSVs into `db/connectivity.db`:
+The table imports are driven by the new PostgreSQL structure:
 
-| Table | Source CSV |
-|-------|------------|
-| `data_to_be_captured` | 42nd_34th_CMETS_Extracted_Data_VoltageFix 1 1(Data to be captured).csv |
-| `margin` | Connectivity_Application_Data_TEST_ALL_SHEETS38 (2) 6(Margin).csv |
-| `element_status` | 42nd_34th_CMETS_Extracted_Data_VoltageFix 1 1(Element Status).csv |
-| `transformation_capacity` | Connectivity_Application_Data_TEST_ALL_SHEETS39 6(Transformation Capacity).csv |
+| Table |
+|-------|
+| `data_to_be_captured` |
+| `margin` |
+| `element_status` |
+| `transformation_capacity` |
 
-Re-run `python -m scripts.csv_to_sqlite` after changing any CSV to refresh the database.
+Re-run the `psql` command after changing your SQL dump to refresh the database.
 
 **Custom frontend path:** Set `APP_FRONTEND_DIST` to an absolute path if the frontend build is not at `../frontend/dist` relative to the backend directory.
