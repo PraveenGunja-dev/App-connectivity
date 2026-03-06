@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
-from app.schemas.auth import LoginRequest, TokenResponse, UserResponse
-from app.auth import create_access_token, get_current_user
+from src.models.auth import LoginRequest, TokenResponse, UserResponse
+from core.auth.auth import create_access_token, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

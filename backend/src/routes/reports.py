@@ -1,16 +1,17 @@
 import csv
-import sqlite3
 import uuid
+import io
+import pandas as pd
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 
-from app.config import settings
-from app.schemas.reports import ReportDataResponse
-from app.auth import get_current_user_optional
-from app.schemas.auth import UserResponse
+from src.config.config import settings
+from src.models.reports import ReportDataResponse
+from core.auth.auth import get_current_user_optional
+from src.models.auth import UserResponse
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -29,12 +30,9 @@ REPORT_TABLES: dict[str, str] = {
 
 # Original CSV files (for exact layout rendering)
 CSV_FILES: dict[str, Path] = {
-    "data_to_be_captured": BACKEND_DIR
-    / "42nd_34th_CMETS_Extracted_Data_VoltageFix 1 1(Data to be captured).csv",
-    "margin": BACKEND_DIR
-    / "Connectivity_Application_Data_TEST_ALL_SHEETS38 (2) 6(Margin).csv",
-    "element_status": BACKEND_DIR
-    / "42nd_34th_CMETS_Extracted_Data_VoltageFix 1 1(Element Status).csv",
+    "data_to_be_captured": BACKEND_DIR / "Data to be captured.csv",
+    "margin": BACKEND_DIR / "Margin.csv",
+    "element_status": BACKEND_DIR / "Element Status.csv",
     "transformation_capacity": BACKEND_DIR
     / "Connectivity_Application_Data_TEST_ALL_SHEETS39 6(Transformation Capacity).csv",
 }
@@ -70,26 +68,29 @@ def _read_csv_raw(sheet: str) -> list[list[str]]:
 
 
 def _fetch_report_data_from_db(table_name: str = DEFAULT_REPORT_TABLE) -> list[list[str]]:
-    """Read tabular report data from SQLite as a 2D list for the Excel viewer."""
-    if not DB_PATH.exists():
-        raise HTTPException(
-            status_code=500,
-            detail="Report database not found. Run the CSV import script first.",
-        )
-
+    """Read tabular report data from PostgreSQL as a 2D list for the Excel viewer."""
     if table_name not in REPORT_TABLES:
         raise HTTPException(status_code=400, detail=f"Unknown report sheet: {table_name}")
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        import psycopg2
+        # Note: psycopg2 needs database_url to be a regular postgres connection string
+        # since settings currently has `database_url` for sqlite, we'll build it from parts:
+        conn = psycopg2.connect(
+            host=settings.db_host,
+            database=settings.db_name,
+            user=settings.db_user,
+            password=settings.db_password,
+            port=settings.db_port
+        )
         try:
             cursor = conn.cursor()
             cursor.execute(f'SELECT * FROM "{REPORT_TABLES[table_name]}"')
             rows = cursor.fetchall()
-            headers = [col[0] for col in cursor.description] if cursor.description else []
+            headers = [col.name for col in cursor.description] if cursor.description else []
         finally:
             conn.close()
-    except sqlite3.Error as exc:
+    except Exception as exc:
         raise HTTPException(
             status_code=500,
             detail=f"Error reading report data from database: {exc}",
@@ -150,15 +151,44 @@ def upload_pdf(
 def _get_processed_csv_rows(sheet: str) -> list[list[str]]:
     """Helper to read and clean CSV data for both viewer and download."""
     rows = _read_csv_raw(sheet)
+    if not rows:
+        return []
 
-    # Some CSVs have a junk first row (scattered reference numbers).
-    # Skip it so the real parent headers start at index 0.
-    if sheet == "data_to_be_captured" and len(rows) > 1:
-        rows = rows[1:]
+    # 1. Find the primary header row (containing "Sr.no." or "S.No.")
+    # This addresses the request to ignore rows above the header in sheets like 'data_to_be_captured'.
+    header_idx = -1
+    for i, row in enumerate(rows[:10]):  # Only search first 10 rows for efficiency
+        # Check first 3 columns for s.no or sr.no (ignoring punctuation/spaces)
+        combined = "".join(str(c) for c in row[:3]).lower().replace(" ", "").replace(".", "").replace(",", "")
+        if "srno" in combined or "sno" in combined:
+            header_idx = i
+            break
+    
+    if header_idx != -1:
+        rows = rows[header_idx:]
+    else:
+        # Fallback for sheets without Sr.no (like Margin), keep current simple empty row skip
+        if len(rows) > 0 and not any(str(c).strip() for c in rows[0]):
+            rows = rows[1:]
 
-    # Stripping the leftmost column if it's empty/metadata.
-    # Check if the first cell of row 0 is empty. If so, column 0 is likely
-    # the headerless metadata column (e.g., "Data Scoure...") that needs removal.
+    # 2. Filter out metadata rows (like "Data Scoure...") that typically appear 
+    # after the headers but before or during the data.
+    def is_junk_metadata(row):
+        if not row: return False
+        # Check first 3 cells for "source" or "scoure" junk
+        val = "".join(str(c) for c in row[:3]).lower().strip()
+        if "source" in val or "scoure" in val:
+            return True
+        return False
+
+    # Filter rows, but preserve the first 2 potential header rows
+    if len(rows) > 2:
+        header_rows = rows[:2]
+        data_rows = [r for r in rows[2:] if not is_junk_metadata(r)]
+        rows = header_rows + data_rows
+
+    # 3. Stripping the leftmost column if it's empty in the discovered header row.
+    # This handles the frequent leading comma in scanned Excel/CSV exports.
     if rows and len(rows[0]) > 0 and not str(rows[0][0]).strip():
         rows = [row[1:] if len(row) > 1 else row for row in rows]
 
@@ -176,7 +206,32 @@ def download_report_csv(
     return Response(
         content=content,
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=output_report.csv"},
+        headers={"Content-Disposition": f"attachment; filename={sheet}_report.csv"},
+    )
+
+
+@router.get("/download/xlsx")
+def download_report_xlsx(
+    sheet: str = DEFAULT_REPORT_TABLE,
+    _user: Annotated[UserResponse | None, Depends(get_current_user_optional)] = None,
+) -> StreamingResponse:
+    """Download cleaned report data as XLSX."""
+    rows = _get_processed_csv_rows(sheet)
+    if not rows:
+        raise HTTPException(status_code=404, detail="No data available for export")
+
+    # Use pandas to generate the XLSX file
+    df = pd.DataFrame(rows)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, header=False, sheet_name='Report')
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={sheet}_report.xlsx"}
     )
 
 

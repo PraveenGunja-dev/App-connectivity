@@ -4,11 +4,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from app.config import settings
-from app.routers import auth, reports
+from src.config.config import settings
+from src.routes import auth, reports
 
 # Frontend build directory (for single-port serving)
-_BACKEND_DIR = Path(__file__).resolve().parent.parent
+_BACKEND_DIR = Path(__file__).resolve().parent
 _FRONTEND_DIST = (
     Path(settings.frontend_dist)
     if settings.frontend_dist

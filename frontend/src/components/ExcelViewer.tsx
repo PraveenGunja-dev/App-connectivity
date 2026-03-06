@@ -1,12 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-    FileSpreadsheet,
-    Search,
-    Download,
-    Filter,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export function ExcelViewer() {
@@ -16,6 +10,10 @@ export function ExcelViewer() {
     const [rows, setRows] = useState<string[][]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [sheet, setSheet] = useState<string>("data_to_be_captured");
+    const [selectedState, setSelectedState] = useState("All States");
+    const [selectedRegion, setSelectedRegion] = useState("All Regions");
+    const [selectedSubstation, setSelectedSubstation] = useState("All Substations");
+
 
     useEffect(() => {
         const fetchData = async () => {
@@ -57,30 +55,78 @@ export function ExcelViewer() {
         };
 
         fetchData();
+        // Reset filters when sheet changes
+        setSelectedState("All States");
+        setSelectedRegion("All Regions");
+        setSelectedSubstation("All Substations");
     }, [sheet]);
 
-    const handleDownload = () => {
-        const token = localStorage.getItem("accessToken");
-        const url = `/api/reports/download/csv?sheet=${encodeURIComponent(sheet)}`;
 
-        const link = document.createElement("a");
-        link.href = url;
-        if (token) {
-            // Browsers don't allow setting headers on simple <a> downloads;
-            // since reports API allows optional auth, we can just hit the URL directly.
-        }
-        link.download = "output_report.csv";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const findColIdx = (term: string) => {
+        const idx = headers.findIndex(h => h?.toLowerCase().includes(term));
+        return idx !== -1 ? idx : subHeaders.findIndex(h => h?.toLowerCase().includes(term));
     };
 
+    const uniqueStates = useMemo(() => {
+        const idx = findColIdx("state");
+        if (idx === -1) return [];
+        const seen = new Set<string>();
+        rows.forEach(row => {
+            const val = row[idx]?.trim();
+            if (val) seen.add(val);
+        });
+        return Array.from(seen).sort();
+    }, [rows, headers, subHeaders]);
+
+    const uniqueRegions = useMemo(() => {
+        const idx = findColIdx("region");
+        if (idx === -1) return [];
+        const seen = new Set<string>();
+        rows.forEach(row => {
+            const val = row[idx]?.trim();
+            if (val) seen.add(val);
+        });
+        return Array.from(seen).sort();
+    }, [rows, headers, subHeaders]);
+
+    const uniqueSubstations = useMemo(() => {
+        const idx = findColIdx("substation");
+        if (idx === -1) return [];
+        const seen = new Set<string>();
+        rows.forEach(row => {
+            const val = row[idx]?.trim();
+            if (val) seen.add(val);
+        });
+        return Array.from(seen).sort();
+    }, [rows, headers, subHeaders]);
+
     const filteredRows = useMemo(() => {
-        if (!searchTerm) return rows;
-        return rows.filter(row =>
-            row.some(cell => String(cell || "").toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-    }, [searchTerm, rows]);
+        let result = rows;
+
+        const stateIdx = findColIdx("state");
+        const regionIdx = findColIdx("region");
+        const substationIdx = findColIdx("substation");
+
+        if (selectedState !== "All States" && stateIdx !== -1) {
+            result = result.filter(row => (row[stateIdx] || "").toLowerCase() === selectedState.toLowerCase());
+        }
+
+        if (selectedRegion !== "All Regions" && regionIdx !== -1) {
+            result = result.filter(row => (row[regionIdx] || "").toLowerCase() === selectedRegion.toLowerCase());
+        }
+
+        if (selectedSubstation !== "All Substations" && substationIdx !== -1) {
+            result = result.filter(row => (row[substationIdx] || "").toLowerCase() === selectedSubstation.toLowerCase());
+        }
+
+        if (searchTerm) {
+            result = result.filter(row =>
+                row.some(cell => String(cell || "").toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+        }
+
+        return result;
+    }, [searchTerm, rows, selectedState, selectedRegion, selectedSubstation, subHeaders]);
 
     // Complex Header Calculation for colSpan and rowSpan
     const complexHeaders = useMemo(() => {
@@ -134,62 +180,74 @@ export function ExcelViewer() {
             viewport={{ once: true }}
             className="flex flex-col rounded-2xl border border-border bg-card shadow-xl overflow-hidden mb-10"
         >
-            {/* Professional Toolbar */}
-            <div className="flex flex-col lg:flex-row items-center justify-between border-b border-border bg-muted/20 px-8 py-5 gap-6">
-                <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10 text-success shadow-inner">
-                        <FileSpreadsheet className="h-6 w-6" />
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-black text-card-foreground tracking-tight">Output Report Viewer</h3>
-                        <div className="flex items-center gap-2">
-                            <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                                {sheet === "data_to_be_captured" && "Live System Output \u2022 Data to be Captured"}
-                                {sheet === "margin" && "Live System Output \u2022 Margin"}
-                                {sheet === "element_status" && "Live System Output \u2022 Element Status"}
-                                {sheet === "transformation_capacity" && "Live System Output \u2022 Transformation Capacity"}
-                            </p>
-                        </div>
-                    </div>
+            {/* Professional Streamlined Toolbar */}
+            <div className="flex flex-col lg:flex-row items-center bg-muted/10 px-6 py-4 gap-4 border-b border-border">
+                <div className="relative flex-1 min-w-[200px] max-w-sm">
+                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+                    <input
+                        type="text"
+                        placeholder="Search records..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-background/50 pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 hover:border-primary/20 transition-all font-medium"
+                    />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                    <div className="relative flex-1 min-w-[220px] max-w-xs">
-                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
-                        <input
-                            type="text"
-                            placeholder="Filter records..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full rounded-xl border border-border bg-background/80 pl-11 pr-4 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/30 transition-all font-medium"
-                        />
-                    </div>
-                    <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-background shadow-sm">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Report:</span>
                         <select
                             value={sheet}
                             onChange={(e) => setSheet(e.target.value)}
-                            className="h-10 rounded-xl border border-border bg-background px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer"
                         >
                             <option value="data_to_be_captured">Data to be Captured</option>
                             <option value="margin">Margin</option>
                             <option value="element_status">Element Status</option>
                             <option value="transformation_capacity">Transformation Capacity</option>
                         </select>
-                        <Button variant="outline" size="sm" className="h-10 rounded-xl px-4 font-bold border-border/60 hover:bg-secondary transition-all">
-                            <Filter className="h-4 w-4 mr-2 opacity-60" />
-                            Filter
-                        </Button>
-                        <Button
-                            variant="default"
-                            size="sm"
-                            className="h-10 rounded-xl px-4 font-bold shadow-lg shadow-primary/20 transition-all active:scale-95"
-                            onClick={handleDownload}
-                            disabled={headers.length === 0}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-background shadow-sm">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">State:</span>
+                        <select
+                            value={selectedState}
+                            onChange={(e) => setSelectedState(e.target.value)}
+                            className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer min-w-[100px]"
                         >
-                            <Download className="h-4 w-4 mr-2" />
-                            Export CSV
-                        </Button>
+                            <option value="All States">All States</option>
+                            {uniqueStates.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-background shadow-sm">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Region:</span>
+                        <select
+                            value={selectedRegion}
+                            onChange={(e) => setSelectedRegion(e.target.value)}
+                            className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer"
+                        >
+                            <option value="All Regions">All Regions</option>
+                            {uniqueRegions.map(r => (
+                                <option key={r} value={r}>{r}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-background shadow-sm">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Substation:</span>
+                        <select
+                            value={selectedSubstation}
+                            onChange={(e) => setSelectedSubstation(e.target.value)}
+                            className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer max-w-[150px]"
+                        >
+                            <option value="All Substations">All Substations</option>
+                            {uniqueSubstations.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                            ))}
+                        </select>
                     </div>
                 </div>
             </div>

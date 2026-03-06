@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 BACKEND_DIR = Path(__file__).resolve().parent
-DB_PATH = BACKEND_DIR / "db" / "connectivity.db"
+DB_PATH = BACKEND_DIR / "core" / "db_connection" / "connectivity.db"
 
 
 def ensure_database() -> None:
@@ -29,7 +29,7 @@ def start_uvicorn() -> None:
         sys.executable,
         "-m",
         "uvicorn",
-        "app.main:app",
+        "app:app",
         "--reload",
         "--host",
         "0.0.0.0",

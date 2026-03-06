@@ -9,28 +9,28 @@ from pathlib import Path
 
 # Paths relative to backend directory
 BACKEND_DIR = Path(__file__).resolve().parent.parent
-DB_DIR = BACKEND_DIR / "db"
+DB_DIR = BACKEND_DIR / "core" / "db_connection"
 DB_PATH = DB_DIR / "connectivity.db"
 
 # CSV file path, table name, 0-based header row index, 0-based first data row index
 CSV_CONFIG = [
     (
-        BACKEND_DIR / "42nd_34th_CMETS_Extracted_Data_VoltageFix 1 1(Data to be captured).csv",
+        BACKEND_DIR / "Data to be captured.csv",
         "data_to_be_captured",
         1,  # header: Sr.no., Region, State, ...
-        4,  # data starts after subheader rows
+        5,  # data starts after subheader and junk rows
     ),
     (
-        BACKEND_DIR / "Connectivity_Application_Data_TEST_ALL_SHEETS38 (2) 6(Margin).csv",
+        BACKEND_DIR / "Margin.csv",
         "margin",
         0,  # header: Sl.No., State, Region, ...
         4,  # data starts after subheader rows
     ),
     (
-        BACKEND_DIR / "42nd_34th_CMETS_Extracted_Data_VoltageFix 1 1(Element Status).csv",
+        BACKEND_DIR / "Element Status.csv",
         "element_status",
         1,  # header: Element Code, Inter/Intra Tx. Element, ...
-        5,  # data starts after "Data Source" row
+        5,  # data starts after subheader and junk rows
     ),
     (
         BACKEND_DIR / "Connectivity_Application_Data_TEST_ALL_SHEETS39 6(Transformation Capacity).csv",
