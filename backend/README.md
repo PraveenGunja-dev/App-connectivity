@@ -71,38 +71,23 @@ For production, copy `.env.example` to `.env` and set `APP_SECRET_KEY` and any o
 
 ### 7. Start the server (frontend + backend on one port)
 
-**Option A – Single Python command from `backend` folder (recommended):**
+**Method A – Python Launcher (Recommended):**
 
-From the backend directory (`D:/App Connectitvity/backend`), run:
-
-```bash
-python run_backend.py
-```
-
-This will:
-
-- ensure the SQLite database exists (runs `python -m scripts.csv_to_sqlite` if needed)  
-- start the FastAPI app with `uvicorn app.main:app --reload --host 0.0.0.0 --port 1581`
-
-**Option B – Single Python command from project root:**
-
-From the project root (`D:/App Connectitvity`), run:
+From the **backend** directory, run:
 
 ```bash
-python run_backend.py
+python start.py
 ```
 
-This uses the same logic but is launched from one level above `backend/`.
-
-**Option C – From project root (Windows `.cmd` helper):**
+**Method B – Windows Command Helper:**
 
 From the project root, run:
 
 ```bash
-backend
+backend.cmd
 ```
 
-This runs `backend.cmd`, which performs setup and starts the same uvicorn server.
+This script performs setup and starts the FastAPI server on port 1581.
 
 **Option D – Manually from the `backend` directory:**
 

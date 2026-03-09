@@ -1,12 +1,8 @@
 @echo off
 REM One-step backend setup + run script
-REM Usage (from project root):  backend   [in CMD]
-REM                             .\backend  [in PowerShell]
+REM Usage (from backend folder):  .\start  [in PowerShell/CMD]
 
 setlocal enabledelayedexpansion
-
-REM Change to the backend directory relative to this script
-cd /d "%~dp0backend"
 
 echo.
 echo ==== Backend setup and start ====
@@ -37,17 +33,9 @@ if exist "requirements.txt" (
     echo [WARN] requirements.txt not found, skipping dependency install.
 )
 
-REM 5) Ensure SQLite database exists (run CSV import if missing)
-if not exist "db\connectivity.db" (
-    echo [INFO] Database not found. Importing CSV data...
-    python -m scripts.csv_to_sqlite
-) else (
-    echo [INFO] Database already exists (db\connectivity.db).
-)
-
-REM 6) Start the FastAPI server with uvicorn
+REM 5) Start the FastAPI server with uvicorn
 echo [INFO] Starting backend server on http://localhost:1581 ...
-uvicorn app.main:app --reload --host 0.0.0.0 --port 1581
+uvicorn app:app --reload --host 0.0.0.0 --port 1581
 
 :end
 endlocal

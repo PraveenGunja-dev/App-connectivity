@@ -5,8 +5,7 @@ import sys
 from pathlib import Path
 
 
-ROOT_DIR = Path(__file__).resolve().parent
-BACKEND_DIR = ROOT_DIR / "backend"
+BACKEND_DIR = Path(__file__).resolve().parent
 DB_PATH = BACKEND_DIR / "core" / "db_connection" / "connectivity.db"
 
 

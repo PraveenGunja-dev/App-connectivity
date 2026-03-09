@@ -2,6 +2,7 @@ import csv
 import uuid
 import io
 import pandas as pd
+from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
@@ -28,13 +29,21 @@ REPORT_TABLES: dict[str, str] = {
     "transformation_capacity": "transformation_capacity",
 }
 
-# Original CSV files (for exact layout rendering)
+# Original CSV files (contain the full data set for each sheet)
 CSV_FILES: dict[str, Path] = {
     "data_to_be_captured": BACKEND_DIR / "Data to be captured.csv",
     "margin": BACKEND_DIR / "Margin.csv",
     "element_status": BACKEND_DIR / "Element Status.csv",
     "transformation_capacity": BACKEND_DIR
     / "Connectivity_Application_Data_TEST_ALL_SHEETS39 6(Transformation Capacity).csv",
+}
+
+# Finalized header definition CSVs (usually only header / subheader rows, no data)
+HEADER_FILES: dict[str, Path] = {
+    "data_to_be_captured": BACKEND_DIR / "Final headers(Data to be captured).csv",
+    "margin": BACKEND_DIR / "Final headers(Margin).csv",
+    "element_status": BACKEND_DIR / "Final headers(Element Status).csv",
+    "transformation_capacity": BACKEND_DIR / "Final headers(Transformation Capacity).csv",
 }
 
 DEFAULT_REPORT_TABLE = "data_to_be_captured"
@@ -65,6 +74,35 @@ def _read_csv_raw(sheet: str) -> list[list[str]]:
     # Fallback with replacement for any undecodable characters
     with open(path, "r", encoding="latin-1", errors="replace", newline="") as f:
         return list(csv.reader(f))
+
+
+def _read_header_rows(sheet: str) -> list[list[str]]:
+    """
+    Read the finalized header definition CSV for a sheet.
+
+    These files contain only header / subheader rows and no data. We return the
+    non-empty rows exactly as authored so that the grid headers match the
+    Excel specification.
+    """
+    path = HEADER_FILES.get(sheet)
+    if path is None or not path.exists():
+        return []
+
+    rows: list[list[str]] = []
+    for encoding in ("utf-8", "cp1252", "latin-1"):
+        try:
+            with open(path, "r", encoding=encoding, newline="") as f:
+                rows = list(csv.reader(f))
+            break
+        except UnicodeDecodeError:
+            continue
+
+    if not rows:
+        return []
+
+    # Keep only rows that have at least one non-blank cell
+    non_empty = [row for row in rows if any(str(c).strip() for c in row)]
+    return non_empty
 
 
 def _fetch_report_data_from_db(table_name: str = DEFAULT_REPORT_TABLE) -> list[list[str]]:
@@ -148,8 +186,8 @@ def upload_pdf(
     return {"id": file_id, "filename": file.filename, "saved_as": safe_name}
 
 
-def _get_processed_csv_rows(sheet: str) -> list[list[str]]:
-    """Helper to read and clean CSV data for both viewer and download."""
+def _get_base_csv_rows(sheet: str) -> list[list[str]]:
+    """Legacy CSV cleaning logic used to derive rows from the original files."""
     rows = _read_csv_raw(sheet)
     if not rows:
         return []
@@ -163,7 +201,7 @@ def _get_processed_csv_rows(sheet: str) -> list[list[str]]:
         if "srno" in combined or "sno" in combined:
             header_idx = i
             break
-    
+
     if header_idx != -1:
         rows = rows[header_idx:]
     else:
@@ -171,10 +209,11 @@ def _get_processed_csv_rows(sheet: str) -> list[list[str]]:
         if len(rows) > 0 and not any(str(c).strip() for c in rows[0]):
             rows = rows[1:]
 
-    # 2. Filter out metadata rows (like "Data Scoure...") that typically appear 
+    # 2. Filter out metadata rows (like "Data Scoure...") that typically appear
     # after the headers but before or during the data.
     def is_junk_metadata(row):
-        if not row: return False
+        if not row:
+            return False
         # Check first 3 cells for "source" or "scoure" junk
         val = "".join(str(c) for c in row[:3]).lower().strip()
         if "source" in val or "scoure" in val:
@@ -193,6 +232,77 @@ def _get_processed_csv_rows(sheet: str) -> list[list[str]]:
         rows = [row[1:] if len(row) > 1 else row for row in rows]
 
     return rows
+
+
+@lru_cache(maxsize=32)
+def _get_processed_csv_rows(sheet: str) -> list[list[str]]:
+    """
+    Helper to read and clean report data for viewer and download.
+
+    Behaviour:
+    - Headers and subheaders are fetched from the 'Final headers(...).csv' files.
+    - Data rows are fetched from the PostgreSQL database.
+    - Logic ensures alignment between the header specification and the database columns.
+    """
+    header_spec_rows = _read_header_rows(sheet)
+    
+    # 1. Fetch data from DB
+    try:
+        db_data = _fetch_report_data_from_db(sheet)
+        db_headers = db_data[0] if db_data else []
+        data_rows = db_data[1:] if len(db_data) > 1 else []
+    except Exception as e:
+        # Fallback to legacy CSV logic if DB fails or is empty
+        base_rows = _get_base_csv_rows(sheet)
+        data_rows = base_rows[2:] if len(base_rows) > 2 else []
+        db_headers = base_rows[0] if base_rows else []
+
+    # 2. Align DB data with Header Spec
+    # If DB has a leading col_0 but the Header Spec starts with a label (e.g. Sr.no),
+    # we strip the first column from the data to maintain horizontal alignment.
+    if data_rows and db_headers and db_headers[0].lower() in ('col_0', 'unnamed: 0', 'index', ''):
+        if header_spec_rows:
+            # Find the first row in spec that actually has labels
+            first_label_row = next((r for r in header_spec_rows if any(c.strip() for c in r)), None)
+            if first_label_row and first_label_row[0].strip():
+                # Strip the leading empty/technical column from database results
+                data_rows = [row[1:] if len(row) > 1 else row for row in data_rows]
+
+    if not header_spec_rows:
+        # If no specification file exists, return the DB data with its headers
+        if db_headers:
+             return [db_headers] + data_rows
+        return data_rows
+
+    # 3. Process Header Rows (ensure exactly two rows for the grid)
+    # Keep only rows that have content (parent and child rows)
+    non_empty_headers = header_spec_rows
+    if len(non_empty_headers) == 1:
+        non_empty_headers = [
+            non_empty_headers[0],
+            [""] * len(non_empty_headers[0]),
+        ]
+    elif len(non_empty_headers) > 2:
+        # If the spec file has more than 2 relevant rows, we use the first two
+        non_empty_headers = non_empty_headers[:2]
+
+    # 4. Normalize widths so the grid renders correctly
+    if data_rows:
+        target_len = max(len(r) for r in data_rows)
+    else:
+        target_len = max(len(r) for r in non_empty_headers) if non_empty_headers else 0
+
+    def normalize_row(row: list[str]) -> list[str]:
+        if len(row) < target_len:
+            return row + [""] * (target_len - len(row))
+        if len(row) > target_len:
+            return row[:target_len]
+        return row
+
+    normalized_headers = [normalize_row(r) for r in non_empty_headers]
+    normalized_data = [normalize_row(r) for r in data_rows]
+
+    return normalized_headers + normalized_data
 
 
 @router.get("/download/csv")

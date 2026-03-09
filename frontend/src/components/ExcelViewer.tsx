@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
 export function ExcelViewer() {
     const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
     const [headers, setHeaders] = useState<string[]>([]);
     const [subHeaders, setSubHeaders] = useState<string[]>([]);
     const [rows, setRows] = useState<string[][]>([]);
@@ -59,74 +59,138 @@ export function ExcelViewer() {
         setSelectedState("All States");
         setSelectedRegion("All Regions");
         setSelectedSubstation("All Substations");
+        setSearchTerm("");
     }, [sheet]);
 
+    // Debounce search input so we don't recompute filters on every keystroke
+    useEffect(() => {
+        const handle = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm.trim());
+        }, 300);
+        return () => clearTimeout(handle);
+    }, [searchTerm]);
 
-    const findColIdx = (term: string) => {
-        const idx = headers.findIndex(h => h?.toLowerCase().includes(term));
-        return idx !== -1 ? idx : subHeaders.findIndex(h => h?.toLowerCase().includes(term));
+
+    const getColIdx = (terms: string[]) => {
+        for (const term of terms) {
+            const idx = headers.findIndex(h => h?.toLowerCase().trim() === term.toLowerCase());
+            if (idx !== -1) return idx;
+            const idxSub = subHeaders.findIndex(h => h?.toLowerCase().trim() === term.toLowerCase());
+            if (idxSub !== -1) return idxSub;
+        }
+        for (const term of terms) {
+            const idx = headers.findIndex(h => h?.toLowerCase().includes(term.toLowerCase()));
+            if (idx !== -1) return idx;
+            const idxSub = subHeaders.findIndex(h => h?.toLowerCase().includes(term.toLowerCase()));
+            if (idxSub !== -1) return idxSub;
+        }
+        return -1;
     };
 
+    const stateIdx = useMemo(() => getColIdx(["state"]), [headers, subHeaders]);
+    const regionIdx = useMemo(() => getColIdx(["region"]), [headers, subHeaders]);
+    const substationIdx = useMemo(() => getColIdx(["substation", "pooling s/s", "pooling station", "s/s name"]), [headers, subHeaders]);
+
+    const normalize = (val: string) => (val || "").trim().toLowerCase();
+
+    // Derived unique options based on OTHER active filters (Cascading Logic)
     const uniqueStates = useMemo(() => {
-        const idx = findColIdx("state");
-        if (idx === -1) return [];
+        if (stateIdx === -1) return [];
+        const filtered = rows.filter(row => {
+            const matchesRegion = selectedRegion === "All Regions" || regionIdx === -1 || normalize(row[regionIdx]) === normalize(selectedRegion);
+            const matchesSubstation = selectedSubstation === "All Substations" || substationIdx === -1 || normalize(row[substationIdx]) === normalize(selectedSubstation);
+            const matchesSearch = !debouncedSearchTerm || row.some(cell => normalize(cell).includes(normalize(debouncedSearchTerm)));
+            return matchesRegion && matchesSubstation && matchesSearch;
+        });
         const seen = new Set<string>();
-        rows.forEach(row => {
-            const val = row[idx]?.trim();
+        filtered.forEach(row => {
+            const val = row[stateIdx]?.trim();
             if (val) seen.add(val);
         });
         return Array.from(seen).sort();
-    }, [rows, headers, subHeaders]);
+    }, [rows, stateIdx, regionIdx, substationIdx, selectedRegion, selectedSubstation, debouncedSearchTerm]);
 
     const uniqueRegions = useMemo(() => {
-        const idx = findColIdx("region");
-        if (idx === -1) return [];
+        if (regionIdx === -1) return [];
+        const filtered = rows.filter(row => {
+            const matchesState = selectedState === "All States" || stateIdx === -1 || normalize(row[stateIdx]) === normalize(selectedState);
+            const matchesSubstation = selectedSubstation === "All Substations" || substationIdx === -1 || normalize(row[substationIdx]) === normalize(selectedSubstation);
+            const matchesSearch = !debouncedSearchTerm || row.some(cell => normalize(cell).includes(normalize(debouncedSearchTerm)));
+            return matchesState && matchesSubstation && matchesSearch;
+        });
         const seen = new Set<string>();
-        rows.forEach(row => {
-            const val = row[idx]?.trim();
+        filtered.forEach(row => {
+            const val = row[regionIdx]?.trim();
             if (val) seen.add(val);
         });
         return Array.from(seen).sort();
-    }, [rows, headers, subHeaders]);
+    }, [rows, stateIdx, regionIdx, substationIdx, selectedState, selectedSubstation, debouncedSearchTerm]);
 
     const uniqueSubstations = useMemo(() => {
-        const idx = findColIdx("substation");
-        if (idx === -1) return [];
+        if (substationIdx === -1) return [];
+        const filtered = rows.filter(row => {
+            const matchesState = selectedState === "All States" || stateIdx === -1 || normalize(row[stateIdx]) === normalize(selectedState);
+            const matchesRegion = selectedRegion === "All Regions" || regionIdx === -1 || normalize(row[regionIdx]) === normalize(selectedRegion);
+            const matchesSearch = !debouncedSearchTerm || row.some(cell => normalize(cell).includes(normalize(debouncedSearchTerm)));
+            return matchesState && matchesRegion && matchesSearch;
+        });
         const seen = new Set<string>();
-        rows.forEach(row => {
-            const val = row[idx]?.trim();
+        filtered.forEach(row => {
+            const val = row[substationIdx]?.trim();
             if (val) seen.add(val);
         });
         return Array.from(seen).sort();
-    }, [rows, headers, subHeaders]);
+    }, [rows, stateIdx, regionIdx, substationIdx, selectedState, selectedRegion, debouncedSearchTerm]);
+
+    // Auto-reset filters if they become invalid due to other selections
+    useEffect(() => {
+        if (selectedState !== "All States" && uniqueStates.length > 0 && !uniqueStates.includes(selectedState)) {
+            setSelectedState("All States");
+        }
+    }, [uniqueStates, selectedState]);
+
+    useEffect(() => {
+        if (selectedRegion !== "All Regions" && uniqueRegions.length > 0 && !uniqueRegions.includes(selectedRegion)) {
+            setSelectedRegion("All Regions");
+        }
+    }, [uniqueRegions, selectedRegion]);
+
+    useEffect(() => {
+        if (selectedSubstation !== "All Substations" && uniqueSubstations.length > 0 && !uniqueSubstations.includes(selectedSubstation)) {
+            setSelectedSubstation("All Substations");
+        }
+    }, [uniqueSubstations, selectedSubstation]);
 
     const filteredRows = useMemo(() => {
         let result = rows;
 
-        const stateIdx = findColIdx("state");
-        const regionIdx = findColIdx("region");
-        const substationIdx = findColIdx("substation");
-
         if (selectedState !== "All States" && stateIdx !== -1) {
-            result = result.filter(row => (row[stateIdx] || "").toLowerCase() === selectedState.toLowerCase());
+            result = result.filter(row => normalize(row[stateIdx]) === normalize(selectedState));
         }
 
         if (selectedRegion !== "All Regions" && regionIdx !== -1) {
-            result = result.filter(row => (row[regionIdx] || "").toLowerCase() === selectedRegion.toLowerCase());
+            result = result.filter(row => normalize(row[regionIdx]) === normalize(selectedRegion));
         }
 
         if (selectedSubstation !== "All Substations" && substationIdx !== -1) {
-            result = result.filter(row => (row[substationIdx] || "").toLowerCase() === selectedSubstation.toLowerCase());
+            result = result.filter(row => normalize(row[substationIdx]) === normalize(selectedSubstation));
         }
 
-        if (searchTerm) {
+        if (debouncedSearchTerm) {
             result = result.filter(row =>
-                row.some(cell => String(cell || "").toLowerCase().includes(searchTerm.toLowerCase()))
+                row.some(cell => normalize(cell).includes(normalize(debouncedSearchTerm)))
             );
         }
 
         return result;
-    }, [searchTerm, rows, selectedState, selectedRegion, selectedSubstation, subHeaders]);
+    }, [debouncedSearchTerm, rows, selectedState, selectedRegion, selectedSubstation, stateIdx, regionIdx, substationIdx]);
+
+    // Cap the number of rendered rows to keep the DOM fast even for huge datasets
+    const MAX_VISIBLE_ROWS = 2000;
+    const visibleRows = useMemo(() => {
+        if (filteredRows.length <= MAX_VISIBLE_ROWS) return filteredRows;
+        return filteredRows.slice(0, MAX_VISIBLE_ROWS);
+    }, [filteredRows]);
 
     // Complex Header Calculation for colSpan and rowSpan
     const complexHeaders = useMemo(() => {
@@ -174,32 +238,27 @@ export function ExcelViewer() {
     }, [complexHeaders]);
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="flex flex-col rounded-2xl border border-border bg-card shadow-xl overflow-hidden mb-10"
-        >
+        <div className="flex flex-col rounded-2xl border border-border bg-card shadow-xl overflow-hidden mb-10">
             {/* Professional Streamlined Toolbar */}
-            <div className="flex flex-col lg:flex-row items-center bg-muted/10 px-6 py-4 gap-4 border-b border-border">
-                <div className="relative flex-1 min-w-[200px] max-w-sm">
-                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+            <div className="flex flex-col lg:flex-row items-center bg-gradient-to-r from-muted/20 to-muted/5 px-6 py-4 gap-4 border-b border-border/50">
+                <div className="relative flex-1 min-w-[240px] max-w-sm group">
+                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
                     <input
                         type="text"
                         placeholder="Search records..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full rounded-xl border border-border bg-background/50 pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 hover:border-primary/20 transition-all font-medium"
+                        className="w-full rounded-xl border border-border/60 bg-background/50 pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary/5 hover:border-primary/20 transition-all font-medium shadow-sm"
                     />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-background shadow-sm">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Report:</span>
+                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                        <span className="text-[10px] font-extrabold text-primary/70 uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Report</span>
                         <select
                             value={sheet}
                             onChange={(e) => setSheet(e.target.value)}
-                            className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer"
+                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer text-foreground/80 hover:text-foreground transition-colors"
                         >
                             <option value="data_to_be_captured">Data to be Captured</option>
                             <option value="margin">Margin</option>
@@ -208,12 +267,12 @@ export function ExcelViewer() {
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-background shadow-sm">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">State:</span>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                        <span className="text-[10px] font-extrabold text-primary/70 uppercase tracking-widest border-r border-border/50 pr-2 mr-1">State</span>
                         <select
                             value={selectedState}
                             onChange={(e) => setSelectedState(e.target.value)}
-                            className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer min-w-[100px]"
+                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer min-w-[120px] text-foreground/80 hover:text-foreground transition-colors"
                         >
                             <option value="All States">All States</option>
                             {uniqueStates.map(s => (
@@ -222,12 +281,12 @@ export function ExcelViewer() {
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-background shadow-sm">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Region:</span>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                        <span className="text-[10px] font-extrabold text-primary/70 uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Region</span>
                         <select
                             value={selectedRegion}
                             onChange={(e) => setSelectedRegion(e.target.value)}
-                            className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer"
+                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer text-foreground/80 hover:text-foreground transition-colors"
                         >
                             <option value="All Regions">All Regions</option>
                             {uniqueRegions.map(r => (
@@ -236,12 +295,12 @@ export function ExcelViewer() {
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-background shadow-sm">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Substation:</span>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                        <span className="text-[10px] font-extrabold text-primary/70 uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Substation</span>
                         <select
                             value={selectedSubstation}
                             onChange={(e) => setSelectedSubstation(e.target.value)}
-                            className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer max-w-[150px]"
+                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer max-w-[180px] text-foreground/80 hover:text-foreground transition-colors"
                         >
                             <option value="All Substations">All Substations</option>
                             {uniqueSubstations.map(s => (
@@ -249,6 +308,18 @@ export function ExcelViewer() {
                             ))}
                         </select>
                     </div>
+
+                    <button
+                        onClick={() => {
+                            setSelectedState("All States");
+                            setSelectedRegion("All Regions");
+                            setSelectedSubstation("All Substations");
+                            setSearchTerm("");
+                        }}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-md active:scale-95"
+                    >
+                        Reset
+                    </button>
                 </div>
             </div>
 
@@ -289,26 +360,21 @@ export function ExcelViewer() {
                         </tr>
                     </thead>
                     <tbody>
-                        <AnimatePresence mode="popLayout">
-                            {filteredRows.map((row, rowIndex) => (
-                                <motion.tr
-                                    key={rowIndex}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="border-b border-[#E2E8F0] last:border-0 transition-colors hover:bg-blue-50/20"
-                                >
-                                    {row.map((cell, cellIndex) => (
-                                        <td
-                                            key={cellIndex}
-                                            className="px-2.5 py-1 text-[11.5px] text-[#2D3748] border-r border-[#E2E8F0] last:border-0 whitespace-nowrap"
-                                        >
-                                            {cell}
-                                        </td>
-                                    ))}
-                                </motion.tr>
-                            ))}
-                        </AnimatePresence>
+                        {visibleRows.map((row, rowIndex) => (
+                            <tr
+                                key={rowIndex}
+                                className="border-b border-[#E2E8F0] last:border-0 transition-colors hover:bg-blue-50/20"
+                            >
+                                {row.map((cell, cellIndex) => (
+                                    <td
+                                        key={cellIndex}
+                                        className="px-2.5 py-1 text-[11.5px] text-[#2D3748] border-r border-[#E2E8F0] last:border-0 whitespace-nowrap"
+                                    >
+                                        {cell}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
@@ -319,9 +385,14 @@ export function ExcelViewer() {
                     <p className="text-xs font-semibold text-muted-foreground">
                         {filteredRows.length} ROWS FOUND
                     </p>
+                    {filteredRows.length > visibleRows.length && (
+                        <p className="text-[10px] text-muted-foreground">
+                            Showing first {visibleRows.length} rows for performance.
+                        </p>
+                    )}
                     <div className="h-4 w-px bg-border hidden sm:block" />
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 }

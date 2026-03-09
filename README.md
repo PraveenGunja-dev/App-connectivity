@@ -62,10 +62,11 @@ The app runs on **one port**: the backend serves both the API and the frontend s
 
 ### Run the app
 
-From the `backend` directory (with venv activated):
+From the **backend** directory:
 
 ```bash
-python run_backend.py
+cd backend
+python start.py
 ```
 
 Then open **http://localhost:1581** for the dashboard. API docs: http://localhost:1581/docs  
