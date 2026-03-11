@@ -89,34 +89,29 @@ const Login = () => {
             <FloatingBackground />
 
             <div className="w-full max-w-md relative z-10">
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, ease: "easeOut" }}
-                    className="flex justify-center mb-8"
-                >
-                    <motion.img
-                        whileHover={{ scale: 1.05 }}
-                        src={adaniLogo}
-                        alt="Adani Logo"
-                        className="h-16 object-contain drop-shadow-md"
-                    />
-                </motion.div>
+                {/* Logo removed from here to shift it inside the card below */}
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
                 >
-                    <Card className="border-border/40 shadow-2xl backdrop-blur-md bg-card/70 ring-1 ring-white/20">
+                    <Card className="border-border shadow-2xl bg-card">
                         <CardHeader className="space-y-1">
                             <motion.div
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.4 }}
                             >
-                                <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
-                                <CardDescription className="text-center">
+                                <CardTitle className="flex justify-center mb-4 pt-2">
+                                    <motion.img
+                                        whileHover={{ scale: 1.05 }}
+                                        src={adaniLogo}
+                                        alt="Adani Logo"
+                                        className="h-14 object-contain drop-shadow-md"
+                                    />
+                                </CardTitle>
+                                <CardDescription className="text-center font-medium text-foreground/70">
                                     Login to Adani App Connectivity Page
                                 </CardDescription>
                             </motion.div>
@@ -137,7 +132,7 @@ const Login = () => {
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
-                                        className="bg-background/40 border-border/40 focus:border-primary/50 transition-all duration-300 focus:shadow-[0_0_10px_rgba(59,130,246,0.1)]"
+                                        className="bg-background border-border focus:border-primary transition-all duration-300 focus:shadow-[0_0_10px_rgba(59,130,246,0.1)]"
                                     />
                                 </motion.div>
                                 <motion.div
@@ -155,7 +150,7 @@ const Login = () => {
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
-                                        className="bg-background/40 border-border/40 focus:border-primary/50 transition-all duration-300 focus:shadow-[0_0_10px_rgba(59,130,246,0.1)]"
+                                        className="bg-background border-border focus:border-primary transition-all duration-300 focus:shadow-[0_0_10px_rgba(59,130,246,0.1)]"
                                     />
                                 </motion.div>
                             </CardContent>
