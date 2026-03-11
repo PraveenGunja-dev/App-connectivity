@@ -2,10 +2,12 @@ import { motion } from "framer-motion";
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard,
+  Home,
 } from "lucide-react";
 
 const navItems = [
-  { title: "Dashboard", path: "/", icon: LayoutDashboard },
+  { title: "Home", path: "/login", icon: Home, color: "var(--adani-wind-blue)" },
+  { title: "Dashboard", path: "/", icon: LayoutDashboard, color: "var(--adani-wind-purple)" },
 ];
 
 interface DashboardSidebarProps {
@@ -50,25 +52,30 @@ export function DashboardSidebar({ open, onClose, collapsed, onSidebarHoverChang
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Link
-                    to={item.path}
-                    onClick={onClose}
-                    className={`group flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium transition-all duration-200 ${collapsed ? "justify-center px-2" : ""} ${isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                      }`}
-                  >
-                    <motion.div
-                      whileHover={{ scale: 1.1, rotate: 3 }}
-                      className="flex shrink-0 items-center justify-center"
+                    <Link
+                      to={item.path}
+                      onClick={onClose}
+                      className={`group flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium transition-all duration-300 ${collapsed ? "justify-center px-2" : ""} ${isActive
+                        ? "bg-gradient-to-r from-[var(--adani-wind-blue)]/10 to-[var(--adani-wind-purple)]/10 text-foreground shadow-sm ring-1 ring-primary/20"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:ring-1 hover:ring-primary/20"
+                        }`}
                     >
-                      <item.icon
-                        className={`h-4 w-4 transition-colors ${isActive
-                          ? "text-sidebar-primary"
-                          : "text-sidebar-muted group-hover:text-sidebar-accent-foreground"
-                          }`}
-                      />
-                    </motion.div>
+                      <motion.div
+                        whileHover={{ scale: 1.15, rotate: 3 }}
+                        className="flex shrink-0 items-center justify-center transition-all duration-300"
+                      >
+                        <item.icon
+                          className="h-6 w-6 transition-colors duration-300"
+                          style={{ color: isActive ? item.color : "var(--gray-400)" }}
+                          // In the CSS we'll handle the hover color transition effectively
+                          onMouseEnter={(e) => {
+                            if (!isActive) e.currentTarget.style.color = item.color;
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isActive) e.currentTarget.style.color = "var(--gray-400)";
+                          }}
+                        />
+                      </motion.div>
                     {!collapsed && (
                       <motion.span
                         animate={isActive ? { x: 2 } : { x: 0 }}

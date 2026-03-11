@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
-
 import { ExcelViewer } from "@/components/ExcelViewer";
+
+
 import { Button } from "@/components/ui/button";
 import { Upload, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -93,7 +94,7 @@ const Index = () => {
           >
             <Button
               variant="outline"
-              className="flex items-center gap-2 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-all duration-300 shadow-sm"
+              className="flex items-center gap-2 border-[var(--adani-wind-purple)]/20 bg-[var(--adani-wind-purple)]/5 text-[var(--adani-wind-purple)] hover:bg-[var(--adani-wind-purple)]/10 transition-all duration-300 shadow-sm"
               onClick={handleUploadClick}
             >
               <Upload className="h-4 w-4" />
@@ -106,7 +107,7 @@ const Index = () => {
             whileTap={{ scale: 0.95 }}
           >
             <Button
-              className="flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-300"
+              className="flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-r from-[var(--adani-wind-blue)] to-[var(--adani-wind-purple)] text-white"
               onClick={handleDownloadCSV}
             >
               <Download className="h-4 w-4" />

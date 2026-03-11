@@ -15,28 +15,28 @@ DB_PATH = DB_DIR / "connectivity.db"
 # CSV file path, table name, 0-based header row index, 0-based first data row index
 CSV_CONFIG = [
     (
-        BACKEND_DIR / "Data to be captured.csv",
-        "data_to_be_captured",
-        1,  # header: Sr.no., Region, State, ...
-        5,  # data starts after subheader and junk rows
-    ),
-    (
         BACKEND_DIR / "Margin.csv",
         "margin",
         0,  # header: Sl.No., State, Region, ...
-        4,  # data starts after subheader rows
+        3,  # data starts at Row 3 (Row 2 is empty)
+    ),
+    (
+        BACKEND_DIR / "Transformation Capacity.csv",
+        "transformation_capacity",
+        1,  # header: ,S.No., Region, State, Substation...
+        3,  # data starts at Row 3 (Row 2 is empty)
+    ),
+    (
+        BACKEND_DIR / "Data to be captured.csv",
+        "data_to_be_captured",
+        1,  # Header at Row 1
+        4,  # Data starts at Row 4
     ),
     (
         BACKEND_DIR / "Element Status.csv",
         "element_status",
-        1,  # header: Element Code, Inter/Intra Tx. Element, ...
-        5,  # data starts after subheader and junk rows
-    ),
-    (
-        BACKEND_DIR / "Connectivity_Application_Data_TEST_ALL_SHEETS39 6(Transformation Capacity).csv",
-        "transformation_capacity",
-        2,  # header: S.No., Region, State, ...
-        4,  # data starts
+        0,  # Header at Row 0
+        3,  # Data starts at Row 3
     ),
 ]
 
@@ -85,6 +85,12 @@ def load_csv_into_table(
     # Get header and data
     header_row = rows[header_row_index]
     data_rows = rows[data_start_index:]
+
+    # Strip leftmost column if it's empty in the discovered header row
+    # (Matches cleaning logic in reports.py for scanned Excel/CSV exports)
+    if header_row and not str(header_row[0]).strip():
+        header_row = header_row[1:]
+        data_rows = [r[1:] if len(r) > 1 else r for r in data_rows]
 
     seen = set()
     col_names = []

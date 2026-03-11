@@ -8,8 +8,9 @@ export function ExcelViewer() {
     const [headers, setHeaders] = useState<string[]>([]);
     const [subHeaders, setSubHeaders] = useState<string[]>([]);
     const [rows, setRows] = useState<string[][]>([]);
+    const [metadata, setMetadata] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [sheet, setSheet] = useState<string>("data_to_be_captured");
+    const [sheet, setSheet] = useState<string>("margin");
     const [selectedState, setSelectedState] = useState("All States");
     const [selectedRegion, setSelectedRegion] = useState("All Regions");
     const [selectedSubstation, setSelectedSubstation] = useState("All Substations");
@@ -41,11 +42,22 @@ export function ExcelViewer() {
                     return;
                 }
 
-                // Row 0 = Parents, Row 1 = Children
-                const [parentRow, childRow, ...dataRows] = json.data;
-                setHeaders(parentRow);
-                setSubHeaders(childRow);
-                setRows(dataRows);
+                if (sheet === "transformation_capacity" && json.data.length >= 3) {
+                    // Row 0 = Metadata row, Row 1 = Parents, Row 2 = Children
+                    const [metaRow, parentRow, childRow, ...dataRows] = json.data;
+                    setHeaders(parentRow);
+                    setSubHeaders(childRow);
+                    setRows(dataRows);
+                    const metaText = metaRow.filter(c => c?.trim()).join(" ");
+                    setMetadata(metaText || null);
+                } else {
+                    // Row 0 = Parents, Row 1 = Children
+                    const [parentRow, childRow, ...dataRows] = json.data;
+                    setHeaders(parentRow);
+                    setSubHeaders(childRow);
+                    setRows(dataRows);
+                    setMetadata(null);
+                }
             } catch (error) {
                 console.error(error);
                 toast.error("Could not load report data");
@@ -254,25 +266,25 @@ export function ExcelViewer() {
 
                 <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
-                        <span className="text-[10px] font-extrabold text-primary/70 uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Report</span>
+                        <span className="text-[10px] font-extrabold text-[var(--adani-wind-blue)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Report</span>
                         <select
                             value={sheet}
                             onChange={(e) => setSheet(e.target.value)}
                             className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer text-foreground/80 hover:text-foreground transition-colors"
                         >
-                            <option value="data_to_be_captured">Data to be Captured</option>
                             <option value="margin">Margin</option>
-                            <option value="element_status">Element Status</option>
                             <option value="transformation_capacity">Transformation Capacity</option>
+                            <option value="data_to_be_captured">Data to be captured</option>
+                            <option value="element_status">Element Status</option>
                         </select>
                     </div>
 
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
-                        <span className="text-[10px] font-extrabold text-primary/70 uppercase tracking-widest border-r border-border/50 pr-2 mr-1">State</span>
+                        <span className="text-[10px] font-extrabold text-[var(--adani-wind-purple)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">State</span>
                         <select
                             value={selectedState}
                             onChange={(e) => setSelectedState(e.target.value)}
-                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer min-w-[120px] text-foreground/80 hover:text-foreground transition-colors"
+                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer max-w-[120px] text-foreground/80 hover:text-foreground transition-colors"
                         >
                             <option value="All States">All States</option>
                             {uniqueStates.map(s => (
@@ -282,7 +294,7 @@ export function ExcelViewer() {
                     </div>
 
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
-                        <span className="text-[10px] font-extrabold text-primary/70 uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Region</span>
+                        <span className="text-[10px] font-extrabold text-[var(--adani-wind-magenta)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Region</span>
                         <select
                             value={selectedRegion}
                             onChange={(e) => setSelectedRegion(e.target.value)}
@@ -296,7 +308,7 @@ export function ExcelViewer() {
                     </div>
 
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
-                        <span className="text-[10px] font-extrabold text-primary/70 uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Substation</span>
+                        <span className="text-[10px] font-extrabold text-[var(--adani-wind-red)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Substation</span>
                         <select
                             value={selectedSubstation}
                             onChange={(e) => setSelectedSubstation(e.target.value)}
@@ -316,12 +328,22 @@ export function ExcelViewer() {
                             setSelectedSubstation("All Substations");
                             setSearchTerm("");
                         }}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-md active:scale-95"
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--adani-wind-blue)] to-[var(--adani-wind-purple)] text-white text-xs font-bold hover:shadow-lg transition-all shadow-md active:scale-95"
                     >
                         Reset
                     </button>
                 </div>
             </div>
+
+            {/* Metadata Banner */}
+            {metadata && (
+                <div className="mx-6 mb-4 flex justify-end">
+                    <span className="text-[13px] font-extrabold text-primary italic tracking-wider animate-pulse-subtle bg-primary/5 px-4 py-1.5 rounded-full border border-primary/10 shadow-sm leading-none flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary mb-0.5"></span>
+                        {metadata}
+                    </span>
+                </div>
+            )}
 
             {/* Grid Interface */}
             <div className="overflow-x-auto max-h-[750px] overflow-y-auto custom-scrollbar">
@@ -334,8 +356,7 @@ export function ExcelViewer() {
                                     key={i}
                                     colSpan={h.colSpan}
                                     rowSpan={h.hasChildren ? 1 : 2}
-                                    className={`px-2.5 py-1.5 font-bold text-[#1A1A1A] text-[11.5px] tracking-tight border-r border-b border-[#94A3B8] align-middle ${h.colSpan > 1 ? "text-center" : "text-left"
-                                        }`}
+                                    className="px-2.5 py-1.5 font-bold text-[#1A1A1A] text-[11.5px] tracking-tight border-r border-b border-[#94A3B8] align-middle text-center"
                                 >
                                     <div className="whitespace-pre-line leading-[1.2]">
                                         {h.text}
@@ -360,21 +381,23 @@ export function ExcelViewer() {
                         </tr>
                     </thead>
                     <tbody>
-                        {visibleRows.map((row, rowIndex) => (
-                            <tr
-                                key={rowIndex}
-                                className="border-b border-[#E2E8F0] last:border-0 transition-colors hover:bg-blue-50/20"
-                            >
-                                {row.map((cell, cellIndex) => (
-                                    <td
-                                        key={cellIndex}
-                                        className="px-2.5 py-1 text-[11.5px] text-[#2D3748] border-r border-[#E2E8F0] last:border-0 whitespace-nowrap"
-                                    >
-                                        {cell}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
+                        {visibleRows.map((row, rowIndex) => {
+                            return (
+                                <tr
+                                    key={rowIndex}
+                                    className="border-b border-[#E2E8F0] last:border-0 transition-colors hover:bg-primary/10"
+                                >
+                                    {row.map((cell, cellIndex) => (
+                                        <td
+                                            key={cellIndex}
+                                            className="px-2.5 py-1 text-[11.5px] text-[#2D3748] border-r border-[#E2E8F0] last:border-0 whitespace-nowrap text-center"
+                                        >
+                                            {cell}
+                                        </td>
+                                    ))}
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

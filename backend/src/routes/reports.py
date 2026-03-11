@@ -16,37 +16,30 @@ from src.models.auth import UserResponse
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
-# This file lives at backend/app/routers/reports.py
-# backend directory is three levels up from here.
+# Paths relative to backend directory
 BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
-DB_PATH = BACKEND_DIR / "db" / "connectivity.db"
+DB_PATH = BACKEND_DIR / "core" / "db_connection" / "connectivity.db"
 
 # Tables created by scripts/csv_to_sqlite.py
 REPORT_TABLES: dict[str, str] = {
-    "data_to_be_captured": "data_to_be_captured",
     "margin": "margin",
-    "element_status": "element_status",
     "transformation_capacity": "transformation_capacity",
+    "data_to_be_captured": "data_to_be_captured",
+    "element_status": "element_status",
 }
 
 # Original CSV files (contain the full data set for each sheet)
 CSV_FILES: dict[str, Path] = {
-    "data_to_be_captured": BACKEND_DIR / "Data to be captured.csv",
     "margin": BACKEND_DIR / "Margin.csv",
+    "transformation_capacity": BACKEND_DIR / "Transformation Capacity.csv",
+    "data_to_be_captured": BACKEND_DIR / "Data to be captured.csv",
     "element_status": BACKEND_DIR / "Element Status.csv",
-    "transformation_capacity": BACKEND_DIR
-    / "Connectivity_Application_Data_TEST_ALL_SHEETS39 6(Transformation Capacity).csv",
 }
 
-# Finalized header definition CSVs (usually only header / subheader rows, no data)
-HEADER_FILES: dict[str, Path] = {
-    "data_to_be_captured": BACKEND_DIR / "Final headers(Data to be captured).csv",
-    "margin": BACKEND_DIR / "Final headers(Margin).csv",
-    "element_status": BACKEND_DIR / "Final headers(Element Status).csv",
-    "transformation_capacity": BACKEND_DIR / "Final headers(Transformation Capacity).csv",
-}
+# No specialized header files currently exist for these new CSVs
+HEADER_FILES: dict[str, Path] = {}
 
-DEFAULT_REPORT_TABLE = "data_to_be_captured"
+DEFAULT_REPORT_TABLE = "margin"
 
 
 def _read_csv_raw(sheet: str) -> list[list[str]]:
@@ -106,32 +99,30 @@ def _read_header_rows(sheet: str) -> list[list[str]]:
 
 
 def _fetch_report_data_from_db(table_name: str = DEFAULT_REPORT_TABLE) -> list[list[str]]:
-    """Read tabular report data from PostgreSQL as a 2D list for the Excel viewer."""
+    """Read tabular report data from SQLite as a 2D list for the Excel viewer."""
     if table_name not in REPORT_TABLES:
         raise HTTPException(status_code=400, detail=f"Unknown report sheet: {table_name}")
 
-    try:
-        import psycopg2
-        # Note: psycopg2 needs database_url to be a regular postgres connection string
-        # since settings currently has `database_url` for sqlite, we'll build it from parts:
-        conn = psycopg2.connect(
-            host=settings.db_host,
-            database=settings.db_name,
-            user=settings.db_user,
-            password=settings.db_password,
-            port=settings.db_port
+    if not DB_PATH.exists():
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database file not found at {DB_PATH}. Please run conversion script.",
         )
+
+    try:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
         try:
             cursor = conn.cursor()
             cursor.execute(f'SELECT * FROM "{REPORT_TABLES[table_name]}"')
             rows = cursor.fetchall()
-            headers = [col.name for col in cursor.description] if cursor.description else []
+            headers = [col[0] for col in cursor.description] if cursor.description else []
         finally:
             conn.close()
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Error reading report data from database: {exc}",
+            detail=f"Error reading report data from SQLite: {exc}",
         ) from exc
 
     if not headers:
@@ -140,9 +131,6 @@ def _fetch_report_data_from_db(table_name: str = DEFAULT_REPORT_TABLE) -> list[l
     data: list[list[str]] = [list(map(str, headers))]
     for row in rows:
         data.append(["" if value is None else str(value) for value in row])
-
-    if len(data) == 1:
-        raise HTTPException(status_code=404, detail="No report rows found in database.")
 
     return data
 
@@ -234,63 +222,114 @@ def _get_base_csv_rows(sheet: str) -> list[list[str]]:
     return rows
 
 
-@lru_cache(maxsize=32)
+# Define which rows from the CSV serve as rich headers (Parent and Child)
+# Format: { sheet: (parent_row_idx, child_row_idx) }
+RICH_HEADERS_MAP: dict[str, tuple[int, int]] = {
+    "margin": (0, 1),
+    "transformation_capacity": (1, 2),
+    "data_to_be_captured": (1, 2),
+    "element_status": (0, 1),
+}
+
+# @lru_cache(maxsize=32)
 def _get_processed_csv_rows(sheet: str) -> list[list[str]]:
     """
     Helper to read and clean report data for viewer and download.
-
-    Behaviour:
-    - Headers and subheaders are fetched from the 'Final headers(...).csv' files.
-    - Data rows are fetched from the PostgreSQL database.
-    - Logic ensures alignment between the header specification and the database columns.
+    Provides two-level headers (Parent and Child) exactly as in the Excel/CSV files.
     """
-    header_spec_rows = _read_header_rows(sheet)
-    
-    # 1. Fetch data from DB
+    raw_csv = _read_csv_raw(sheet)
+    if not raw_csv:
+        return []
+
+    # 1. Fetch data from DB (actual records)
     try:
         db_data = _fetch_report_data_from_db(sheet)
-        db_headers = db_data[0] if db_data else []
+        # db_data[0] is technical headers from SQLite, we discard it for the rich ones below
         data_rows = db_data[1:] if len(db_data) > 1 else []
-    except Exception as e:
-        # Fallback to legacy CSV logic if DB fails or is empty
+    except Exception:
+        # Fallback to local CSV if DB fails
         base_rows = _get_base_csv_rows(sheet)
         data_rows = base_rows[2:] if len(base_rows) > 2 else []
-        db_headers = base_rows[0] if base_rows else []
 
-    # 2. Align DB data with Header Spec
-    # If DB has a leading col_0 but the Header Spec starts with a label (e.g. Sr.no),
-    # we strip the first column from the data to maintain horizontal alignment.
-    if data_rows and db_headers and db_headers[0].lower() in ('col_0', 'unnamed: 0', 'index', ''):
-        if header_spec_rows:
-            # Find the first row in spec that actually has labels
-            first_label_row = next((r for r in header_spec_rows if any(c.strip() for c in r)), None)
-            if first_label_row and first_label_row[0].strip():
-                # Strip the leading empty/technical column from database results
-                data_rows = [row[1:] if len(row) > 1 else row for row in data_rows]
-
-    if not header_spec_rows:
-        # If no specification file exists, return the DB data with its headers
-        if db_headers:
-             return [db_headers] + data_rows
-        return data_rows
-
-    # 3. Process Header Rows (ensure exactly two rows for the grid)
-    # Keep only rows that have content (parent and child rows)
-    non_empty_headers = header_spec_rows
-    if len(non_empty_headers) == 1:
-        non_empty_headers = [
-            non_empty_headers[0],
-            [""] * len(non_empty_headers[0]),
-        ]
-    elif len(non_empty_headers) > 2:
-        # If the spec file has more than 2 relevant rows, we use the first two
-        non_empty_headers = non_empty_headers[:2]
-
-    # 4. Normalize widths so the grid renders correctly
-    if data_rows:
-        target_len = max(len(r) for r in data_rows)
+    # 2. Extract Rich Headers
+    if sheet in RICH_HEADERS_MAP:
+        p_idx, c_idx = RICH_HEADERS_MAP[sheet]
+        parent_headers = raw_csv[p_idx] if p_idx < len(raw_csv) else []
+        child_headers = raw_csv[c_idx] if c_idx < len(raw_csv) else []
     else:
-        target_len = max(len(r) for r in non_empty_headers) if non_empty_headers else 0
+        parent_headers = raw_csv[0] if raw_csv else []
+        child_headers = [""] * len(parent_headers)
+
+    # Clean up empty leading column for all files (align with stripped DB columns)
+    is_leading_empty = (
+        parent_headers and not str(parent_headers[0]).strip() and 
+        child_headers and not str(child_headers[0]).strip()
+    )
+    if is_leading_empty:
+         parent_headers = parent_headers[1:]
+         child_headers = child_headers[1:]
+         # Note: data_rows from DB is already stripped in csv_to_sqlite.py
+
+    # 3. Handle specific column removals for data_to_be_captured
+    if sheet == "data_to_be_captured":
+        cols_to_remove = {
+            "date of last element unique code",
+            "in-principle grant",
+            "final grant",
+            "in case of land bg conversion date"
+        }
+        
+        # Propagate parent headers so we don't lose the label if the first column is removed
+        full_parents = []
+        last_p = ""
+        for p in parent_headers:
+            if str(p).strip():
+                last_p = p
+            full_parents.append(last_p)
+
+        # Identify indices to keep
+        remaining_indices = []
+        for i in range(len(child_headers)):
+            # Normalize strings: replace newlines/tabs with space, then collapse multiple spaces
+            def normalize_header(s):
+                if not s: return ""
+                cleaned = " ".join(str(s).replace("\r", " ").replace("\n", " ").split())
+                return cleaned.lower()
+
+            p_val = normalize_header(parent_headers[i])
+            c_val = normalize_header(child_headers[i])
+            
+            if p_val in cols_to_remove or c_val in cols_to_remove:
+                continue # Skip this column
+            
+            remaining_indices.append(i)
+        
+        # Filter all row sets
+        new_parents = [full_parents[i] for i in remaining_indices]
+        child_headers = [child_headers[i] for i in remaining_indices]
+        data_rows = [[r[i] if i < len(r) else "" for i in remaining_indices] for r in data_rows]
+
+        # Reset parent headers to clear duplicates (restore span structure for UI)
+        parent_headers = []
+        last_val = None
+        for p in new_parents:
+            if p == last_val:
+                parent_headers.append("")
+            else:
+                parent_headers.append(p)
+                last_val = p if str(p).strip() else None
+
+    # 4. Handle Metadata (As of...) for Transformation Capacity
+    meta_row = None
+    if sheet == "transformation_capacity":
+        if raw_csv and any(str(c).strip() for c in raw_csv[0]):
+            meta_row = raw_csv[0]
+            if meta_row and not str(meta_row[0]).strip():
+                meta_row = meta_row[1:]
+
+    # 4. Standard normalization/padding
+    all_rows = [parent_headers, child_headers] + data_rows
+    target_len = max(len(r) for r in all_rows) if all_rows else 0
 
     def normalize_row(row: list[str]) -> list[str]:
         if len(row) < target_len:
@@ -299,10 +338,11 @@ def _get_processed_csv_rows(sheet: str) -> list[list[str]]:
             return row[:target_len]
         return row
 
-    normalized_headers = [normalize_row(r) for r in non_empty_headers]
-    normalized_data = [normalize_row(r) for r in data_rows]
-
-    return normalized_headers + normalized_data
+    normalized = [normalize_row(r) for r in all_rows]
+    if meta_row:
+        normalized.insert(0, normalize_row(meta_row))
+    
+    return normalized
 
 
 @router.get("/download/csv")

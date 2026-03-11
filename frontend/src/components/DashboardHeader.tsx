@@ -41,8 +41,10 @@ export function DashboardHeader({ title, sidebarOpen, onToggleSidebar }: Dashboa
             className="h-9 sm:h-11 object-contain cursor-pointer"
           />
           <div className="hidden h-6 w-px bg-border sm:block mx-1" />
-          <h1 className="hidden sm:block text-lg font-bold tracking-tight text-foreground/90">
-            {title}
+          <h1 className="hidden sm:block text-xl font-extrabold tracking-tight">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[var(--adani-wind-blue)] via-[var(--adani-wind-purple)] to-[var(--adani-wind-red)]">
+              {title}
+            </span>
           </h1>
         </motion.div>
       </div>
@@ -75,10 +77,9 @@ export function DashboardHeader({ title, sidebarOpen, onToggleSidebar }: Dashboa
           >
             <div className="hidden text-right lg:block">
               <p className="text-sm font-bold text-foreground leading-tight">{displayName}</p>
-              <p className="text-[10px] font-bold text-primary uppercase tracking-tighter">Gold Admin</p>
             </div>
-            <Avatar className="h-10 w-10 ring-2 ring-primary/10 shadow-sm transition-transform group-hover:scale-105 active:scale-95">
-              <AvatarFallback className="bg-primary text-sm font-bold text-white">
+            <Avatar className="h-10 w-10 ring-2 ring-[var(--adani-wind-purple)]/20 shadow-md transition-transform group-hover:scale-105 active:scale-95">
+              <AvatarFallback className="bg-gradient-to-br from-[var(--adani-wind-blue)] via-[var(--adani-wind-purple)] to-[var(--adani-wind-magenta)] text-sm font-bold text-white">
                 {initials}
               </AvatarFallback>
             </Avatar>
