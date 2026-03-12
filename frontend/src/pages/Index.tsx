@@ -4,12 +4,14 @@ import { ExcelViewer } from "@/components/ExcelViewer";
 
 
 import { Button } from "@/components/ui/button";
-import { Upload, Download } from "lucide-react";
+import { Upload, Download, ChevronDown, FileText, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sheet, setSheet] = useState("margin");
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -58,17 +60,15 @@ const Index = () => {
     }
   };
 
-  const handleDownloadCSV = () => {
-    toast.info("Preparing Report CSV...");
-
+  const handleDownload = (format: 'csv' | 'xlsx') => {
     const link = document.createElement("a");
-    link.href = "/api/reports/download/csv";
-    link.download = "output_report.csv";
+    link.href = `/api/reports/download/${format}?sheet=${sheet}`;
+    link.download = `${sheet}_report.${format}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    toast.success("Report downloaded successfully!");
+    setShowDownloadOptions(false);
+    toast.success(`${format.toUpperCase()} Download Started`);
   };
 
   return (
@@ -101,19 +101,46 @@ const Index = () => {
               Upload PDF
             </Button>
           </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Button
-              className="flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-r from-[var(--adani-wind-blue)] to-[var(--adani-wind-purple)] text-white"
-              onClick={handleDownloadCSV}
+          <div className="relative">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <Download className="h-4 w-4" />
-              Download CSV
-            </Button>
-          </motion.div>
+              <Button
+                className="flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-r from-[var(--adani-wind-blue)] to-[var(--adani-wind-purple)] text-white"
+                onClick={() => setShowDownloadOptions(!showDownloadOptions)}
+              >
+                <Download className="h-4 w-4" />
+                Download Report
+                <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${showDownloadOptions ? 'rotate-180' : ''}`} />
+              </Button>
+            </motion.div>
+
+            {showDownloadOptions && (
+              <div className="absolute left-0 mt-2 w-48 rounded-xl border border-border bg-card shadow-xl z-[100] overflow-hidden animate-in fade-in zoom-in duration-200">
+                <div className="p-1">
+                  <button
+                    onClick={() => handleDownload('csv')}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-foreground/80 hover:bg-muted hover:text-foreground transition-all rounded-lg text-left"
+                  >
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    Export as CSV
+                  </button>
+                  <button
+                    onClick={() => handleDownload('xlsx')}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold text-foreground/80 hover:bg-muted hover:text-foreground transition-all rounded-lg text-left"
+                  >
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-50 text-green-600">
+                      <FileSpreadsheet className="h-4 w-4" />
+                    </div>
+                    Export as XLSX
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </motion.div>
 
@@ -129,7 +156,7 @@ const Index = () => {
           transition={{ delay: 0.6, duration: 0.6 }}
           className="mt-8 grid gap-8 xl:grid-cols-1"
         >
-          <ExcelViewer />
+          <ExcelViewer sheet={sheet} setSheet={setSheet} />
         </motion.div>
       </motion.div>
     </DashboardLayout>

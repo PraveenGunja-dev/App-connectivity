@@ -42,7 +42,7 @@ export function DashboardHeader({ title, sidebarOpen, onToggleSidebar }: Dashboa
           />
           <div className="hidden h-6 w-px bg-border sm:block mx-1" />
           <h1 className="hidden sm:block text-xl font-extrabold tracking-tight">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[var(--adani-wind-blue)] via-[var(--adani-wind-purple)] to-[var(--adani-wind-red)]">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[var(--adani-wind-blue)] via-[var(--adani-wind-purple)] via-[var(--adani-wind-magenta)] to-[var(--adani-wind-red)]">
               {title}
             </span>
           </h1>

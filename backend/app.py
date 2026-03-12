@@ -6,6 +6,28 @@ from fastapi.responses import FileResponse
 
 from src.config.config import settings
 from src.routes import auth, reports
+import subprocess
+import sys
+
+# --- Self-Bootstrapping Database Logic ---
+def ensure_database():
+    """Create the SQLite database from CSVs if it does not exist."""
+    backend_dir = Path(__file__).resolve().parent
+    db_path = backend_dir / "core" / "db_connection" / "connectivity.db"
+    
+    if not db_path.exists():
+        print("[INFO] Database not found. Importing CSV data...")
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "src.utils.csv_to_sqlite"],
+                cwd=str(backend_dir),
+                check=True,
+            )
+        except Exception as e:
+            print(f"[ERROR] Failed to initialize database: {e}")
+
+ensure_database()
+# -----------------------------------------
 
 # Frontend build directory (for single-port serving)
 _BACKEND_DIR = Path(__file__).resolve().parent
@@ -75,3 +97,9 @@ def serve_spa(full_path: str):
         },
         status_code=404,
     )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    print("[INFO] Starting backend on http://localhost:1581 ...")
+    uvicorn.run("app:app", host="0.0.0.0", port=1581, reload=True)

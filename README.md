@@ -2,105 +2,88 @@
 
 Professional dashboard for monitoring and managing app connectivity across the Adani ecosystem.
 
-## Features
+## ✨ Premium Features
 
-- **Dynamic Personalized Dashboard**: Real-time overview of business metrics.
-- **Excel Viewer**: Interactive spreadsheet-like grid for data analysis and reporting.
-- **KPI Monitoring**: Tracking Total Revenue, Active Users, and Order statuses.
-- **Reporting**: Advanced charts and data visualization for business insights.
-- **Secure Access**: Protected routes with session management.
+- **Dynamic Navigation**: Reimagined sidebar with premium spring animations, state-aware indicators, and glassmorphism depth.
+- **Advanced Excel Viewer**: Interactive grid with fixed headers, cascading filters (State, Region, Substation), and high-performance rendering.
+- **Multi-Format Export**: One-click report download in both **CSV** and **XLSX** (Excel) formats.
+- **Branded Design**: High-fidelity Adani Renewables identity with perfectly matched brand gradients and vector icons.
+- **Automated Data Pipeline**: Self-bootstrapping backend that initializes a SQLite database directly from source CSV files on first run.
 
-## Tech Stack
+## 🛠 Tech Stack
 
 - **Frontend**: React, TypeScript, Vite
-- **Backend**: FastAPI (Python)
+- **Backend**: FastAPI (Python), Pandas, Openpyxl
 - **Styling**: Tailwind CSS, Framer Motion
-- **UI Components**: shadcn/ui, Lucide React
-- **Data**: SQLite (from CSV import), TanStack Query
-
-## Running the application (single port)
-
-The app runs on **one port**: the backend serves both the API and the frontend static build.
-
-### First-time setup
-
-1. **Backend** (Python venv, dependencies, DB, frontend build):
-
-   ```bash
-   cd backend
-   python -m venv .venv
-   .venv\Scripts\activate          # Windows
-   # source .venv/bin/activate     # macOS/Linux
-   pip install -r requirements.txt
-   ```
-
-2. **Frontend build** (one-time; from project root):
-
-   ```bash
-   cd frontend
-   npm install
-   npm run build
-   cd ..
-   ```
-
-3. **Database Setup** (PostgreSQL):
-   
-   Ensure PostgreSQL is installed and added to your system PATH.
-   Create a `.env` file in the `backend/` directory referencing your local database:
-   ```env
-   APP_DATABASE_URL="postgresql://postgres:password@localhost:5432/App Connectivity"
-   APP_DB_USER="postgres"
-   APP_DB_PASSWORD="password"
-   APP_DB_HOST="localhost"
-   APP_DB_PORT="5432"
-   APP_DB_NAME="App Connectivity"
-   ```
-   Load the data from the SQL dump into your Postgres database (make sure you create the empty database first):
-   ```bash
-   psql -U postgres -d "App Connectivity" -f sqlite_dump.sql
-   ```
-
-### Run the app
-
-From the **backend** directory:
-
-```bash
-cd backend
-python start.py
-```
-
-Then open **http://localhost:1581** for the dashboard. API docs: http://localhost:1581/docs  
-
-No need to run the frontend dev server; the backend serves the built frontend.
+- **UI Components**: Shadcn/ui, Lucide React
+- **Data Persistence**: SQLite (Managed via CSV sources)
 
 ---
 
-## Project structure
+## 🚀 Running the Application
 
-```text
-├── backend/           # FastAPI app, serves API + frontend static files
-│   ├── app/
-│   ├── db/            # SQLite database (created by scripts)
-│   └── scripts/       # e.g. csv_to_sqlite.py
-├── frontend/          # React + Vite app (build output in dist/)
-│   ├── src/
-│   └── dist/          # Built files (served by backend)
-└── README.md
+The application is designed as a unified system where the Python backend serves both the API and the production-ready frontend.
+
+### 1. Preparation (First-time)
+
+**A. Backend Setup**
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+# source .venv/bin/activate     # macOS/Linux
+pip install -r requirements.txt
 ```
 
-See **backend/README.md** for detailed backend setup, endpoints, and database tables.
-
-## Frontend-only development
-
-To run the frontend dev server (hot reload) separately:
-
+**B. Frontend Build**
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run build
 ```
 
-Use the backend on port 8000 for API calls (see backend README for CORS).
+### 2. Launching the App
+
+Start the unified server from the **backend** directory:
+```bash
+cd backend
+python app.py
+```
+
+- **Dashboard**: [http://localhost:1581](http://localhost:1581)
+- **API Docs**: [http://localhost:1581/docs](http://localhost:1581/docs)
+
+---
+
+## 📂 Project Structure
+
+```text
+├── backend/               # FastAPI Server (Port 1581)
+│   ├── core/              # Infrastructure
+│   │   ├── auth/          # JWT & Security logic
+│   │   └── db_connection/ # SQLite database & source CSV files
+│   ├── src/               # Application Logic
+│   │   ├── config/        # Environment & Settings
+│   │   ├── routes/        # API Endpoints (Reports, Auth)
+│   │   └── utils/         # Data migration & helper scripts
+│   ├── app.py             # Unified entry point (API + Frontend hosting)
+│   └── requirements.txt   # Backend dependencies
+├── frontend/              # React Application
+│   ├── src/               # UI components, state, and pages
+│   ├── public/            # Branded assets (logo.png)
+│   └── package.json       # Frontend dependencies
+└── README.md
+```
+
+## 🏦 Data Management
+
+Report data is sourced from CSV files located in `backend/core/db_connection/`.
+- `Margin.csv`
+- `Transformation Capacity.csv`
+- `Data to be captured.csv`
+- `Element Status.csv`
+
+The system automatically synchronizes these files into the SQLite database whenever the server starts.
 
 ---
 © 2026 Adani Group. All rights reserved.

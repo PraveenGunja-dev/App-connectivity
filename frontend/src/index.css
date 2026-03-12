@@ -13,10 +13,10 @@
 :root {
   /* ============ PRIMARY COLORS ============ */
   /* ============ ADANI WIND BRAND PALETTE ============ */
-  --adani-wind-blue: #0082c3;
-  --adani-wind-purple: #633991;
-  --adani-wind-magenta: #a62177;
-  --adani-wind-red: #da1f3d;
+  --adani-wind-blue: #0088CE;
+  --adani-wind-purple: #5C2D91;
+  --adani-wind-magenta: #B9208B;
+  --adani-wind-red: #E31B23;
   --adani-navy: #003366;
   --adani-dark-navy: #001A33;
   --energy-green: #00A651;
@@ -47,8 +47,8 @@
   --bg-secondary: #F4F6F8;
   --bg-tertiary: #EEF2F7;
   --bg-gradient: linear-gradient(135deg, #F4F6F8 0%, #FFFFFF 50%, #EEF2F7 100%);
-  --bg-card: rgba(255, 255, 255, 0.8);
-  --bg-glass: rgba(255, 255, 255, 0.6);
+  --bg-card: #FFFFFF;
+  --bg-glass: #FFFFFF;
 
   --text-primary: #1E293B;
   --text-secondary: #475569;
@@ -250,7 +250,7 @@
   }
 
   .glass-header {
-    @apply bg-white/80 backdrop-blur-xl border-b border-border/50 sticky top-0 z-40;
+    @apply bg-white border-b border-border/50 sticky top-0 z-40;
   }
 
   .gradient-text {

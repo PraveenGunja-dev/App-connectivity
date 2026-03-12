@@ -18,17 +18,13 @@ class Settings(BaseSettings):
     # Frontend static files (optional; default: ../frontend/dist relative to backend)
     frontend_dist: str | None = None
     
-    # Database
+    # Database (SQLite, used by scripts; report data is served from CSV files)
     database_url: str = "sqlite:///core/db_connection/connectivity.db"
-    db_user: str = "postgres"
-    db_password: str = "password"
-    db_host: str = "localhost"
-    db_port: str = "5432"
-    db_name: str = "App Connectivity"
 
     class Config:
         env_prefix = "APP_"
         env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()

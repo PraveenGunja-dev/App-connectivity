@@ -18,7 +18,8 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 
 # Paths relative to backend directory
 BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
-DB_PATH = BACKEND_DIR / "core" / "db_connection" / "connectivity.db"
+DB_DIR = BACKEND_DIR / "core" / "db_connection"
+DB_PATH = DB_DIR / "connectivity.db"
 
 # Tables created by scripts/csv_to_sqlite.py
 REPORT_TABLES: dict[str, str] = {
@@ -30,10 +31,10 @@ REPORT_TABLES: dict[str, str] = {
 
 # Original CSV files (contain the full data set for each sheet)
 CSV_FILES: dict[str, Path] = {
-    "margin": BACKEND_DIR / "Margin.csv",
-    "transformation_capacity": BACKEND_DIR / "Transformation Capacity.csv",
-    "data_to_be_captured": BACKEND_DIR / "Data to be captured.csv",
-    "element_status": BACKEND_DIR / "Element Status.csv",
+    "margin": DB_DIR / "Margin.csv",
+    "transformation_capacity": DB_DIR / "Transformation Capacity.csv",
+    "data_to_be_captured": DB_DIR / "Data to be captured.csv",
+    "element_status": DB_DIR / "Element Status.csv",
 }
 
 # No specialized header files currently exist for these new CSVs

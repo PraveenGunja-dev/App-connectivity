@@ -8,35 +8,35 @@ import sqlite3
 from pathlib import Path
 
 # Paths relative to backend directory
-BACKEND_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 DB_DIR = BACKEND_DIR / "core" / "db_connection"
 DB_PATH = DB_DIR / "connectivity.db"
 
 # CSV file path, table name, 0-based header row index, 0-based first data row index
 CSV_CONFIG = [
     (
-        BACKEND_DIR / "Margin.csv",
+        DB_DIR / "Margin.csv",
         "margin",
         0,  # header: Sl.No., State, Region, ...
         3,  # data starts at Row 3 (Row 2 is empty)
     ),
     (
-        BACKEND_DIR / "Transformation Capacity.csv",
+        DB_DIR / "Transformation Capacity.csv",
         "transformation_capacity",
         1,  # header: ,S.No., Region, State, Substation...
         3,  # data starts at Row 3 (Row 2 is empty)
     ),
     (
-        BACKEND_DIR / "Data to be captured.csv",
+        DB_DIR / "Data to be captured.csv",
         "data_to_be_captured",
         1,  # Header at Row 1
         4,  # Data starts at Row 4
     ),
     (
-        BACKEND_DIR / "Element Status.csv",
+        DB_DIR / "Element Status.csv",
         "element_status",
         0,  # Header at Row 0
-        3,  # Data starts at Row 3
+        5,  # Data starts at Row 5
     ),
 ]
 

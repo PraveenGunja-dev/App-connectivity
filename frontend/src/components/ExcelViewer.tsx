@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
 
-export function ExcelViewer() {
+interface ExcelViewerProps {
+    sheet: string;
+    setSheet: (sheet: string) => void;
+}
+
+export function ExcelViewer({ sheet, setSheet }: ExcelViewerProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
     const [headers, setHeaders] = useState<string[]>([]);
@@ -10,7 +15,6 @@ export function ExcelViewer() {
     const [rows, setRows] = useState<string[][]>([]);
     const [metadata, setMetadata] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [sheet, setSheet] = useState<string>("margin");
     const [selectedState, setSelectedState] = useState("All States");
     const [selectedRegion, setSelectedRegion] = useState("All Regions");
     const [selectedSubstation, setSelectedSubstation] = useState("All Substations");
@@ -249,6 +253,18 @@ export function ExcelViewer() {
         return set;
     }, [complexHeaders]);
 
+    // Determine column widths based on header text
+    const getColumnWidth = (header: string, subHeader: string) => {
+        const combined = (header + " " + subHeader).toLowerCase();
+        if (combined.includes("sr.no") || combined.includes("s.no") || combined === " ") return "w-[60px]";
+        if (combined.includes("remark")) return "w-[400px]";
+        if (combined.includes("coordinates")) return "w-[180px]";
+        if (combined.includes("substation") || combined.includes("pooling")) return "w-[220px]";
+        if (combined.includes("state") || combined.includes("region")) return "w-[120px]";
+        if (combined.includes("date")) return "w-[120px]";
+        return "w-[150px]"; // Default width
+    };
+
     return (
         <div className="flex flex-col rounded-2xl border border-border bg-card shadow-xl overflow-hidden mb-10">
             {/* Professional Streamlined Toolbar */}
@@ -265,7 +281,7 @@ export function ExcelViewer() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background shadow-sm hover:shadow-md transition-all duration-300">
                         <span className="text-[10px] font-extrabold text-[var(--adani-wind-blue)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Report</span>
                         <select
                             value={sheet}
@@ -279,7 +295,7 @@ export function ExcelViewer() {
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background shadow-sm hover:shadow-md transition-all duration-300">
                         <span className="text-[10px] font-extrabold text-[var(--adani-wind-purple)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">State</span>
                         <select
                             value={selectedState}
@@ -293,7 +309,7 @@ export function ExcelViewer() {
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background shadow-sm hover:shadow-md transition-all duration-300">
                         <span className="text-[10px] font-extrabold text-[var(--adani-wind-magenta)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Region</span>
                         <select
                             value={selectedRegion}
@@ -307,7 +323,7 @@ export function ExcelViewer() {
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background shadow-sm hover:shadow-md transition-all duration-300">
                         <span className="text-[10px] font-extrabold text-[var(--adani-wind-red)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Substation</span>
                         <select
                             value={selectedSubstation}
@@ -337,7 +353,7 @@ export function ExcelViewer() {
 
             {/* Metadata Banner */}
             {metadata && (
-                <div className="mx-6 mb-4 flex justify-end">
+                <div className="mx-6 mb-4 mt-4 flex justify-end">
                     <span className="text-[13px] font-extrabold text-primary italic tracking-wider animate-pulse-subtle bg-primary/5 px-4 py-1.5 rounded-full border border-primary/10 shadow-sm leading-none flex items-center gap-2">
                         <span className="h-1.5 w-1.5 rounded-full bg-primary mb-0.5"></span>
                         {metadata}
@@ -346,9 +362,14 @@ export function ExcelViewer() {
             )}
 
             {/* Grid Interface */}
-            <div className="overflow-x-auto max-h-[750px] overflow-y-auto custom-scrollbar">
-                <table className="w-full border-collapse bg-white">
-                    <thead>
+            <div className="overflow-x-auto max-h-[750px] overflow-y-auto custom-scrollbar border border-border/50 rounded-b-2xl">
+                <table className="w-full border-separate border-spacing-0 bg-white table-fixed">
+                    <colgroup>
+                        {headers.map((h, i) => (
+                            <col key={i} className={getColumnWidth(h, subHeaders[i] || "")} />
+                        ))}
+                    </colgroup>
+                    <thead className="sticky top-0 z-30">
                         {/* Row 1: Parent Headers */}
                         <tr className="bg-[#D9EAF7]">
                             {complexHeaders.map((h, i) => (
@@ -356,9 +377,9 @@ export function ExcelViewer() {
                                     key={i}
                                     colSpan={h.colSpan}
                                     rowSpan={h.hasChildren ? 1 : 2}
-                                    className="px-2.5 py-1.5 font-bold text-[#1A1A1A] text-[11.5px] tracking-tight border-r border-b border-[#94A3B8] align-middle text-center"
+                                    className="px-2.5 py-2 font-bold text-[#1A1A1A] text-[11.5px] tracking-tight border-r border-b border-[#94A3B8] align-middle text-center sticky top-0 bg-[#D9EAF7]"
                                 >
-                                    <div className="whitespace-pre-line leading-[1.2]">
+                                    <div className="whitespace-normal break-words leading-[1.2]">
                                         {h.text}
                                     </div>
                                 </th>
@@ -372,25 +393,37 @@ export function ExcelViewer() {
                                 return (
                                     <th
                                         key={i}
-                                        className="px-2 py-1 font-bold text-[#1A1A1A] text-[10.5px] border-r border-b border-[#94A3B8] text-center align-middle"
+                                        className="px-2 py-1.5 font-bold text-[#1A1A1A] text-[10.5px] border-r border-b border-[#94A3B8] text-center align-middle sticky top-[33px] bg-[#D9EAF7]"
                                     >
-                                        {sub}
+                                        <div className="whitespace-normal break-words">
+                                            {sub}
+                                        </div>
                                     </th>
                                 );
                             })}
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="relative z-10">
                         {visibleRows.map((row, rowIndex) => {
+                            const isTransformationCapacity = sheet === "transformation_capacity";
+                            // S.No is index 0, Substation is index 3 after stripping leading empty col
+                            const isHighlighted = isTransformationCapacity && 
+                                                 row[0] === "63" && 
+                                                 row[3] === "Bhadla-IV";
+
                             return (
                                 <tr
                                     key={rowIndex}
-                                    className="border-b border-[#E2E8F0] last:border-0 transition-colors hover:bg-primary/10"
+                                    className={`transition-colors ${
+                                        isHighlighted 
+                                        ? "bg-amber-50 hover:bg-amber-100 border-l-4 border-l-amber-400" 
+                                        : "hover:bg-primary/10"
+                                    }`}
                                 >
                                     {row.map((cell, cellIndex) => (
                                         <td
                                             key={cellIndex}
-                                            className="px-2.5 py-1 text-[11.5px] text-[#2D3748] border-r border-[#E2E8F0] last:border-0 whitespace-nowrap text-center"
+                                            className="px-2.5 py-2 text-[11.5px] text-[#2D3748] border-r border-b border-[#E2E8F0] text-center align-middle break-words whitespace-normal"
                                         >
                                             {cell}
                                         </td>
