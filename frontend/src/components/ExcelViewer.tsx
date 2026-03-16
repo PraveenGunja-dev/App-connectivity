@@ -210,13 +210,17 @@ export function ExcelViewer({ sheet, setSheet }: ExcelViewerProps) {
 
     // Complex Header Calculation for colSpan and rowSpan
     const complexHeaders = useMemo(() => {
+        if (!headers || headers.length === 0) return [];
+        
         const result: { text: string; colSpan: number; hasChildren: boolean; startIndex: number }[] = [];
         let i = 0;
 
         while (i < headers.length) {
-            const parentText = String(headers[i] || "").trim();
+            const rawText = headers[i];
+            const parentText = String(rawText || "").trim();
 
             // Determine span based on empty cells following this parent
+            // If the parent is empty, it might still have children in the subHeaders
             let span = 1;
             let nextI = i + 1;
             while (nextI < headers.length && String(headers[nextI] || "").trim() === "") {
@@ -224,7 +228,6 @@ export function ExcelViewer({ sheet, setSheet }: ExcelViewerProps) {
                 nextI++;
             }
 
-            // A parent "has children" if the subHeader row contains any label in this span
             const childrenLabels = subHeaders.slice(i, i + span).filter(s => String(s || "").trim() !== "");
 
             result.push({
@@ -253,40 +256,21 @@ export function ExcelViewer({ sheet, setSheet }: ExcelViewerProps) {
         return set;
     }, [complexHeaders]);
 
-    // Determine column widths based on header text
-    const getColumnWidth = (header: string, subHeader: string) => {
-        const combined = (header + " " + subHeader).toLowerCase();
-        if (combined.includes("sr.no") || combined.includes("s.no") || combined === " ") return "w-[60px]";
-        if (combined.includes("remark")) return "w-[400px]";
-        if (combined.includes("coordinates")) return "w-[180px]";
-        if (combined.includes("substation") || combined.includes("pooling")) return "w-[220px]";
-        if (combined.includes("state") || combined.includes("region")) return "w-[120px]";
-        if (combined.includes("date")) return "w-[120px]";
-        return "w-[150px]"; // Default width
-    };
+    // Fixed and equal column width for a robust, consistent grid
+    const COLUMN_WIDTH = 150; // pixels
+    const CELL_HEIGHT = "h-[40px]";
 
     return (
-        <div className="flex flex-col rounded-2xl border border-border bg-card shadow-xl overflow-hidden mb-10">
+        <div className="flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden mb-10 transition-all duration-300 hover:shadow-primary/5">
             {/* Professional Streamlined Toolbar */}
-            <div className="flex flex-col lg:flex-row items-center bg-gradient-to-r from-muted/20 to-muted/5 px-6 py-4 gap-4 border-b border-border/50">
-                <div className="relative flex-1 min-w-[240px] max-w-sm group">
-                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-                    <input
-                        type="text"
-                        placeholder="Search records..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full rounded-xl border border-border/60 bg-background/50 pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary/5 hover:border-primary/20 transition-all font-medium shadow-sm"
-                    />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background shadow-sm hover:shadow-md transition-all duration-300">
-                        <span className="text-[10px] font-extrabold text-[var(--adani-wind-blue)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Report</span>
+            <div className="flex flex-col lg:flex-row items-center justify-center bg-gradient-to-r from-muted/30 via-muted/10 to-transparent px-6 py-5 gap-4 border-b border-border/60">
+                <div className="flex flex-wrap items-center justify-center gap-3 w-full">
+                    <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border/80 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] border-r border-border/80 pr-3 mr-1">Report</span>
                         <select
                             value={sheet}
                             onChange={(e) => setSheet(e.target.value)}
-                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer text-foreground/80 hover:text-foreground transition-colors"
+                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer text-foreground/90 hover:text-primary transition-colors"
                         >
                             <option value="margin">Margin</option>
                             <option value="transformation_capacity">Transformation Capacity</option>
@@ -295,12 +279,12 @@ export function ExcelViewer({ sheet, setSheet }: ExcelViewerProps) {
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background shadow-sm hover:shadow-md transition-all duration-300">
-                        <span className="text-[10px] font-extrabold text-[var(--adani-wind-purple)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">State</span>
+                    <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border/80 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                        <span className="text-[10px] font-black text-[var(--adani-wind-purple)] uppercase tracking-[0.2em] border-r border-border/80 pr-3 mr-1">State</span>
                         <select
                             value={selectedState}
                             onChange={(e) => setSelectedState(e.target.value)}
-                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer max-w-[120px] text-foreground/80 hover:text-foreground transition-colors"
+                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer max-w-[140px] text-foreground/90 hover:text-[var(--adani-wind-purple)] transition-colors"
                         >
                             <option value="All States">All States</option>
                             {uniqueStates.map(s => (
@@ -309,12 +293,12 @@ export function ExcelViewer({ sheet, setSheet }: ExcelViewerProps) {
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background shadow-sm hover:shadow-md transition-all duration-300">
-                        <span className="text-[10px] font-extrabold text-[var(--adani-wind-magenta)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Region</span>
+                    <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border/80 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                        <span className="text-[10px] font-black text-[var(--adani-wind-magenta)] uppercase tracking-[0.2em] border-r border-border/80 pr-3 mr-1">Region</span>
                         <select
                             value={selectedRegion}
                             onChange={(e) => setSelectedRegion(e.target.value)}
-                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer text-foreground/80 hover:text-foreground transition-colors"
+                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer text-foreground/90 hover:text-[var(--adani-wind-magenta)] transition-colors"
                         >
                             <option value="All Regions">All Regions</option>
                             {uniqueRegions.map(r => (
@@ -323,12 +307,12 @@ export function ExcelViewer({ sheet, setSheet }: ExcelViewerProps) {
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background shadow-sm hover:shadow-md transition-all duration-300">
-                        <span className="text-[10px] font-extrabold text-[var(--adani-wind-red)] uppercase tracking-widest border-r border-border/50 pr-2 mr-1">Substation</span>
+                    <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border/80 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
+                        <span className="text-[10px] font-black text-[var(--adani-wind-red)] uppercase tracking-[0.2em] border-r border-border/80 pr-3 mr-1">Station</span>
                         <select
                             value={selectedSubstation}
                             onChange={(e) => setSelectedSubstation(e.target.value)}
-                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer max-w-[180px] text-foreground/80 hover:text-foreground transition-colors"
+                            className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer max-w-[180px] text-foreground/90 hover:text-[var(--adani-wind-red)] transition-colors"
                         >
                             <option value="All Substations">All Substations</option>
                             {uniqueSubstations.map(s => (
@@ -344,88 +328,119 @@ export function ExcelViewer({ sheet, setSheet }: ExcelViewerProps) {
                             setSelectedSubstation("All Substations");
                             setSearchTerm("");
                         }}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--adani-wind-blue)] to-[var(--adani-wind-purple)] text-white text-xs font-bold hover:shadow-lg transition-all shadow-md active:scale-95"
+                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-500 text-[11px] font-bold uppercase tracking-widest hover:bg-[var(--adani-wind-blue)] hover:text-white hover:border-[var(--adani-wind-blue)] hover:shadow-lg hover:shadow-blue-100 transition-all active:scale-95"
                     >
-                        Reset
+                        Reset Filters
                     </button>
                 </div>
             </div>
 
             {/* Metadata Banner */}
             {metadata && (
-                <div className="mx-6 mb-4 mt-4 flex justify-end">
-                    <span className="text-[13px] font-extrabold text-primary italic tracking-wider animate-pulse-subtle bg-primary/5 px-4 py-1.5 rounded-full border border-primary/10 shadow-sm leading-none flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary mb-0.5"></span>
+                <div className="px-6 py-3 flex justify-end bg-primary/5 border-b border-primary/10">
+                    <span className="text-[12px] font-bold text-primary tracking-wide flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-primary animate-pulse"></span>
                         {metadata}
                     </span>
                 </div>
             )}
 
             {/* Grid Interface */}
-            <div className="overflow-x-auto max-h-[750px] overflow-y-auto custom-scrollbar border border-border/50 rounded-b-2xl">
-                <table className="w-full border-separate border-spacing-0 bg-white table-fixed">
+            <div className="relative overflow-x-auto max-h-[850px] overflow-y-auto custom-scrollbar bg-slate-50/30 border border-slate-200/60 rounded-b-2xl">
+                {isLoading && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-[2px]">
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="h-10 w-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                            <span className="text-sm font-bold text-primary animate-pulse uppercase tracking-widest">Synchronizing Data...</span>
+                        </div>
+                    </div>
+                )}
+
+                <table className="w-full border-separate border-spacing-0 table-fixed min-w-full">
                     <colgroup>
-                        {headers.map((h, i) => (
-                            <col key={i} className={getColumnWidth(h, subHeaders[i] || "")} />
+                        {/* Data Columns */}
+                        {(headers.length > 0 ? headers : Array(20).fill("")).map((_, i) => (
+                            <col key={i} style={{ width: `${COLUMN_WIDTH}px` }} />
                         ))}
                     </colgroup>
-                    <thead className="sticky top-0 z-30">
+                    <thead className="sticky top-0 z-40 bg-white">
                         {/* Row 1: Parent Headers */}
-                        <tr className="bg-[#D9EAF7]">
+                        <tr className="bg-slate-100 shadow-sm">
+                            
                             {complexHeaders.map((h, i) => (
                                 <th
                                     key={i}
                                     colSpan={h.colSpan}
                                     rowSpan={h.hasChildren ? 1 : 2}
-                                    className="px-2.5 py-2 font-bold text-[#1A1A1A] text-[11.5px] tracking-tight border-r border-b border-[#94A3B8] align-middle text-center sticky top-0 bg-[#D9EAF7]"
+                                    className="p-0 border-r border-b border-slate-300 align-middle text-center sticky top-0 bg-slate-100 z-40 font-bold text-slate-800 text-[11px] uppercase tracking-wider"
                                 >
-                                    <div className="whitespace-normal break-words leading-[1.2]">
-                                        {h.text}
+                                    <div 
+                                        className="flex items-center justify-center text-center px-2 leading-tight overflow-hidden text-[11px]"
+                                        style={{ 
+                                            height: h.hasChildren ? '36px' : '72px',
+                                            width: `${h.colSpan * COLUMN_WIDTH}px`
+                                        }}
+                                    >
+                                        <span className="line-clamp-2">{h.text || (h.hasChildren ? "" : " ")}</span>
                                     </div>
                                 </th>
                             ))}
                         </tr>
                         {/* Row 2: Child Sub-Headers */}
-                        <tr className="bg-[#D9EAF7]">
+                        <tr className="bg-slate-100 shadow-sm">
                             {subHeaders.map((sub, i) => {
                                 // Only skip columns owned by rowSpan=2 parents (standalone columns)
                                 if (skippedColumns.has(i)) return null;
                                 return (
                                     <th
                                         key={i}
-                                        className="px-2 py-1.5 font-bold text-[#1A1A1A] text-[10.5px] border-r border-b border-[#94A3B8] text-center align-middle sticky top-[33px] bg-[#D9EAF7]"
+                                        className="p-0 border-r border-b border-slate-300 align-middle text-center sticky top-[36px] bg-slate-100 z-40 font-bold text-slate-800 text-[10px] uppercase tracking-tight"
                                     >
-                                        <div className="whitespace-normal break-words">
-                                            {sub}
+                                        <div 
+                                            className="h-[36px] flex items-center justify-center text-center px-2 leading-tight overflow-hidden text-[10px]"
+                                            style={{ width: `${COLUMN_WIDTH}px` }}
+                                        >
+                                            <span className="line-clamp-2">{sub}</span>
                                         </div>
                                     </th>
                                 );
                             })}
                         </tr>
                     </thead>
-                    <tbody className="relative z-10">
+                    <tbody className="relative z-10 bg-white">
                         {visibleRows.map((row, rowIndex) => {
                             const isTransformationCapacity = sheet === "transformation_capacity";
-                            // S.No is index 0, Substation is index 3 after stripping leading empty col
                             const isHighlighted = isTransformationCapacity && 
                                                  row[0] === "63" && 
                                                  row[3] === "Bhadla-IV";
+                            
+                            // Calculate actual serial number based on filtering
+                            const serialNumber = rowIndex + 1;
 
                             return (
                                 <tr
                                     key={rowIndex}
-                                    className={`transition-colors ${
+                                    className={`group transition-colors ${
                                         isHighlighted 
-                                        ? "bg-amber-50 hover:bg-amber-100 border-l-4 border-l-amber-400" 
-                                        : "hover:bg-primary/10"
+                                        ? "bg-amber-50/80 hover:bg-amber-100/80" 
+                                        : "hover:bg-slate-50"
                                     }`}
                                 >
+                                    
+                                    {/* Data Columns */}
                                     {row.map((cell, cellIndex) => (
                                         <td
                                             key={cellIndex}
-                                            className="px-2.5 py-2 text-[11.5px] text-[#2D3748] border-r border-b border-[#E2E8F0] text-center align-middle break-words whitespace-normal"
+                                            className={`p-0 border-r border-b border-slate-200 align-middle ${
+                                                isHighlighted ? "border-amber-200/50" : ""
+                                            }`}
                                         >
-                                            {cell}
+                                            <div 
+                                                className={`flex items-center justify-start text-left px-3 overflow-x-auto whitespace-nowrap scrollbar-hide text-[12px] font-medium text-slate-700 group-hover:text-slate-900 transition-colors ${CELL_HEIGHT}`}
+                                                style={{ width: `${COLUMN_WIDTH}px` }}
+                                            >
+                                                {cell}
+                                            </div>
                                         </td>
                                     ))}
                                 </tr>
@@ -439,11 +454,11 @@ export function ExcelViewer({ sheet, setSheet }: ExcelViewerProps) {
             <div className="flex items-center justify-between border-t border-border bg-muted/20 px-6 py-4">
                 <div className="flex items-center gap-4">
                     <p className="text-xs font-semibold text-muted-foreground">
-                        {filteredRows.length} ROWS FOUND
+                        {visibleRows.length} ROW{visibleRows.length !== 1 ? 'S' : ''} FOUND
                     </p>
                     {filteredRows.length > visibleRows.length && (
                         <p className="text-[10px] text-muted-foreground">
-                            Showing first {visibleRows.length} rows for performance.
+                            (Total: {filteredRows.length} rows - showing first {visibleRows.length} for performance)
                         </p>
                     )}
                     <div className="h-4 w-px bg-border hidden sm:block" />

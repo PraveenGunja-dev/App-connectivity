@@ -29,13 +29,14 @@ def ensure_database():
 ensure_database()
 # -----------------------------------------
 
-# Frontend build directory (for single-port serving)
+# Frontend build directory (for single-port serving with /app-connectivity base path)
 _BACKEND_DIR = Path(__file__).resolve().parent
 _FRONTEND_DIST = (
     Path(settings.frontend_dist)
     if settings.frontend_dist
     else _BACKEND_DIR.parent / "frontend" / "dist"
 )
+_APP_CONNECTIVITY_PREFIX = "app-connectivity"
 
 app = FastAPI(
     title=settings.app_name,
@@ -62,38 +63,66 @@ def health() -> dict:
     return {"status": "ok", "service": "adani-app-connectivity-api"}
 
 
-def _serve_frontend(path: str) -> FileResponse | None:
-    """Serve a file from frontend dist, or None if not found."""
-    if ".." in path or path.startswith("/"):
-        return None
-    file_path = _FRONTEND_DIST / path
-    if file_path.is_file():
-        return FileResponse(file_path)
-    return None
+@app.get("/")
+def root_redirect():
+    """Redirect root path to /app-connectivity/."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/app-connectivity/")
 
 
+@app.get("/app-connectivity/{full_path:path}")
 @app.get("/{full_path:path}")
 def serve_spa(full_path: str):
-    """Serve frontend static files or index.html for SPA routing."""
-    if full_path == "api" or full_path.startswith("api/"):
+    """Serve frontend static files or index.html for SPA routing.
+    
+    This handler covers:
+    1. Direct requests for files in /assets/ or /fonts/ (at root or under prefix)
+    2. Requests for index.html under the prefix
+    3. SPA routing fallbacks (return index.html)
+    """
+    # 1. Protection: do not serve index.html for unknown API routes
+    if full_path.startswith("api/") or full_path == "api":
         from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Not Found")
-    # Try to serve static file
-    response = _serve_frontend(full_path)
-    if response is not None:
-        return response
-    # SPA fallback: serve index.html
-    index_path = _FRONTEND_DIST / "index.html"
-    if index_path.is_file():
-        return FileResponse(index_path)
-    # No frontend build: return minimal API info (dev without frontend build)
+        raise HTTPException(status_code=404, detail="API route not found")
+    
+    # 2. Extract the relative path from the dist folder
+    # Handle cases with and without the app-connectivity prefix
+    rel_path = full_path
+    if rel_path.startswith(_APP_CONNECTIVITY_PREFIX + "/"):
+        rel_path = rel_path[len(_APP_CONNECTIVITY_PREFIX) + 1:]
+    elif rel_path == _APP_CONNECTIVITY_PREFIX:
+        rel_path = ""
+    
+    # Clean up slashes
+    rel_path = rel_path.strip("/").strip("\\")
+    
+    # 3. If path is empty (it was just the prefix or it's root), check for index.html
+    if not rel_path:
+        index_path = _FRONTEND_DIST / "index.html"
+        if index_path.is_file():
+            return FileResponse(index_path)
+    
+    # 4. Try to serve specific file from dist folder (assets, fonts, etc.)
+    file_path = _FRONTEND_DIST / rel_path
+    if file_path.is_file():
+        return FileResponse(file_path)
+    
+    # 5. SPA Fallback: If the path doesn't look like a file (no extension) 
+    # or if it's under the app-connectivity prefix, serve index.html
+    # This allows React Router to handle the URL client-side.
+    if "." not in rel_path or full_path.startswith(_APP_CONNECTIVITY_PREFIX):
+        index_path = _FRONTEND_DIST / "index.html"
+        if index_path.is_file():
+            return FileResponse(index_path)
+    
+    # 6. Final fallback: Return API info or 404
     from fastapi.responses import JSONResponse
     return JSONResponse(
         content={
-            "message": "Adani App Connectivity API",
+            "message": "Adani App Connectivity",
             "docs": "/docs",
-            "health": "/health",
-            "hint": "Build the frontend (npm run build in frontend/) and restart to serve the app.",
+            "app": "/app-connectivity/",
+            "hint": "Ensure the frontend is built: 'npm run build' in frontend directory.",
         },
         status_code=404,
     )

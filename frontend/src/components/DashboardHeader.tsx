@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Bell, Search, Menu, X, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-const adaniLogo = "/assets/logo.png";
+const adaniLogo = "/app-connectivity/assets/logo.png";
 
 interface DashboardHeaderProps {
   title: string;
@@ -10,6 +11,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ title, sidebarOpen, onToggleSidebar }: DashboardHeaderProps) {
+  const navigate = useNavigate();
   const userEmail = localStorage.getItem("userEmail") || "admin@adani.com";
   // Extract the first part of the email as the name
   const rawName = userEmail.split(/[._@]/)[0];
@@ -92,7 +94,7 @@ export function DashboardHeader({ title, sidebarOpen, onToggleSidebar }: Dashboa
               localStorage.removeItem("isAuthenticated");
               localStorage.removeItem("accessToken");
               localStorage.removeItem("userEmail");
-              window.location.href = "/login";
+              navigate("/login");
             }}
             className="flex items-center gap-1 rounded-xl px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
           >

@@ -56,10 +56,11 @@ From the **backend** directory, run:
 python app.py
 ```
 
-- **App (dashboard):** [http://localhost:1581](http://localhost:1581)
+- **App (dashboard):** [http://localhost:1581/app-connectivity](http://localhost:1581/app-connectivity)
+- **Root redirect:** [http://localhost:1581](http://localhost:1581) (automatically redirects to `/app-connectivity`)
 - **API docs:** [http://localhost:1581/docs](http://localhost:1581/docs)
 
-The backend serves the frontend static build from `frontend/dist/`, so you only need this one server to run the full application.
+The backend serves the frontend static build from `frontend/dist/` at the `/app-connectivity` base path, so you only need this one server to run the full application.
 
 ---
 

@@ -1,194 +1,139 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-const adaniLogo = "/assets/logo.png";
-
-const FloatingBackground = () => {
-    return (
-        <div className="absolute inset-0 overflow-hidden -z-10">
-            {[...Array(6)].map((_, i) => (
-                <motion.div
-                    key={i}
-                    className="absolute rounded-full bg-primary/5 blur-3xl"
-                    initial={{
-                        width: Math.random() * 400 + 200,
-                        height: Math.random() * 400 + 200,
-                        x: Math.random() * 100 + "%",
-                        y: Math.random() * 100 + "%",
-                        opacity: 0.3,
-                    }}
-                    animate={{
-                        x: [Math.random() * 100 + "%", Math.random() * 100 + "%", Math.random() * 100 + "%"],
-                        y: [Math.random() * 100 + "%", Math.random() * 100 + "%", Math.random() * 100 + "%"],
-                        scale: [1, 1.2, 0.9, 1],
-                    }}
-                    transition={{
-                        duration: Math.random() * 20 + 20,
-                        repeat: Infinity,
-                        ease: "linear",
-                    }}
-                />
-            ))}
-        </div>
-    );
-};
 
 const Login = () => {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleMicrosoftSSO = async () => {
         setIsLoading(true);
-
         try {
-            const response = await fetch("/api/auth/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ email, password }),
-            });
-
-            if (!response.ok) {
-                toast.error("Invalid email or password");
-                return;
-            }
-
-            const data: { access_token: string; token_type: string; user_email: string } = await response.json();
-
-            // Persist auth details for protected routes and API calls
-            localStorage.setItem("accessToken", data.access_token);
-            localStorage.setItem("userEmail", data.user_email);
+            // Microsoft SSO authentication logic here
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulating API call
+            
+            // Set authentication
+            localStorage.setItem("accessToken", "microsoft-sso-token");
+            localStorage.setItem("userEmail", "user@microsoft.com");
             localStorage.setItem("isAuthenticated", "true");
-
-            toast.success("Login successful!");
+            
+            toast.success("Microsoft SSO Login successful!");
             navigate("/");
         } catch (error) {
             console.error(error);
-            toast.error("Login failed. Please try again.");
+            toast.error("Microsoft SSO login failed. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleEnterApplication = () => {
+        setIsLoading(true);
+        try {
+            // Direct application entry without authentication
+            localStorage.setItem("accessToken", "guest-token");
+            localStorage.setItem("userEmail", "guest@appconnectivity.com");
+            localStorage.setItem("isAuthenticated", "true");
+            
+            toast.success("Welcome to App Connectivity!");
+            navigate("/");
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to enter application. Please try again.");
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="relative min-h-screen flex items-center justify-center p-4">
-            <div
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat -z-30"
-                style={{ backgroundImage: "url('/assets/Adani Power Thumbnail-1.webp')" }}
-            />
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] -z-20" />
-            <FloatingBackground />
-
-            <div className="w-full max-w-md relative z-10">
-                {/* Logo removed from here to shift it inside the card below */}
-
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
-                >
-                    <Card className="border-border shadow-2xl bg-card">
-                        <CardHeader className="space-y-1">
-                            <motion.div
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.4 }}
-                            >
-                                <CardTitle className="flex justify-center mb-4 pt-2">
-                                    <motion.img
-                                        whileHover={{ scale: 1.05 }}
-                                        src={adaniLogo}
-                                        alt="Adani Logo"
-                                        className="h-14 object-contain drop-shadow-md"
-                                    />
-                                </CardTitle>
-                                <CardDescription className="text-center font-medium text-foreground/70">
-                                    Login to Adani App Connectivity Page
-                                </CardDescription>
-                            </motion.div>
-                        </CardHeader>
-                        <form onSubmit={handleLogin}>
-                            <CardContent className="space-y-4">
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.5 }}
-                                    className="space-y-2"
-                                >
-                                    <Label htmlFor="email" className="text-foreground/80">Email</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="name@example.com"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        required
-                                        className="bg-background border-border focus:border-primary transition-all duration-300 focus:shadow-[0_0_10px_rgba(59,130,246,0.1)]"
-                                    />
-                                </motion.div>
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.6 }}
-                                    className="space-y-2"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor="password" title="Enter any password" className="text-foreground/80">Password</Label>
-                                    </div>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                        className="bg-background border-border focus:border-primary transition-all duration-300 focus:shadow-[0_0_10px_rgba(59,130,246,0.1)]"
-                                    />
-                                </motion.div>
-                            </CardContent>
-                            <CardFooter>
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.7 }}
-                                    className="w-full"
-                                >
-                                    <Button
-                                        type="submit"
-                                        className="w-full font-semibold transition-all duration-300 relative overflow-hidden group"
-                                        disabled={isLoading}
-                                    >
-                                        <span className="relative z-10">{isLoading ? "Logging in..." : "Login"}</span>
-                                        {!isLoading && (
-                                            <motion.div
-                                                className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"
-                                                initial={false}
-                                            />
-                                        )}
-                                    </Button>
-                                </motion.div>
-                            </CardFooter>
-                        </form>
-                    </Card>
-                </motion.div>
-
-                <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.9 }}
-                    className="mt-8 text-center text-sm text-white/70 font-medium"
-                >
-                    © {new Date().getFullYear()} Adani Green Energy Limited. All rights reserved.
-                </motion.p>
+        <div className="min-h-screen bg-background relative overflow-hidden text-foreground" style={{ fontFamily: 'Adani, sans-serif' }}>
+            {/* Grid Background */}
+            <div className="fixed inset-0 z-0 bg-grid">
+                <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/70 to-background/90 z-0 pointer-events-none"></div>
             </div>
+
+            {/* Content layered on top */}
+            <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
+                {/* Main Content Area */}
+                <main className="w-full max-w-5xl flex flex-col items-center">
+                    
+                    {/* Top Logo & Branding */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                        className="flex items-center justify-center mb-10 mt-8 md:mt-0"
+                    >
+                        <img src="/app-connectivity/assets/logo.png" alt="Adani Logo" className="h-10 md:h-12 w-auto object-contain" />
+                    </motion.div>
+
+                    {/* Grand Futuristic Title */}
+                    <motion.h1 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.8, delay: 0.1 }}
+                        className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-[#0B74B0] via-[#75479C] to-[#BD3861] bg-clip-text text-transparent tracking-[0.2em] ml-[0.2em] mb-6 uppercase text-center leading-tight drop-shadow-md dark:drop-shadow-xl"
+                    >
+                        APP CONNECTIVITY
+                    </motion.h1>
+
+                    {/* Subtitle with Tracking & Borders */}
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.8, delay: 0.3 }}
+                        className="w-full max-w-3xl border-t border-b border-border py-4 mb-20 text-center flex justify-center"
+                    >
+                        <p className="text-muted-foreground text-xs sm:text-sm md:text-base tracking-[0.4em] ml-[0.4em] font-light uppercase">
+                            Transmission Line Management System
+                        </p>
+                    </motion.div>
+
+                    {/* Centered Login Controls */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.5 }}
+                        className="w-full max-w-4xl flex flex-col sm:flex-row items-center justify-center gap-6"
+                    >
+                        {/* Microsoft SSO Button */}
+                        <Button
+                            onClick={handleMicrosoftSSO}
+                            disabled={isLoading}
+                            variant="outline"
+                            className="w-full sm:w-auto min-w-[280px] h-16 text-xl font-bold border-2 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                        >
+                            <svg className="w-7 h-7 mr-3" viewBox="0 0 23 23" fill="currentColor">
+                                <path d="M10.875 0L0 1.375V10.875H10.875V0Z" />
+                                <path d="M22.75 0H12.25V10.875H22.75V0Z" />
+                                <path d="M10.875 12.25H0V21.75L10.875 23V12.25Z" />
+                                <path d="M22.75 12.25H12.25V23L22.75 21.75V12.25Z" />
+                            </svg>
+                            {isLoading ? "Authenticating..." : "Microsoft SSO"}
+                        </Button>
+
+                        {/* Enter Application Button */}
+                        <Button
+                            onClick={handleEnterApplication}
+                            disabled={isLoading}
+                            className="w-full sm:w-auto min-w-[280px] h-16 text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                        >
+                            {isLoading ? "Entering..." : "Enter Application"}
+                        </Button>
+                    </motion.div>
+                </main>
+            </div>
+
+            <style>{`
+                .bg-grid {
+                    background-image: 
+                        linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+                    background-size: 50px 50px;
+                }
+            `}</style>
         </div>
     );
 };
