@@ -56,6 +56,10 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
 
+# Support for deployment subpaths
+app.include_router(auth.router, prefix="/app-connectivity/api")
+app.include_router(reports.router, prefix="/app-connectivity/api")
+
 
 @app.get("/health")
 def health() -> dict:

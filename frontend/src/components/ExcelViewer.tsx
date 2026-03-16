@@ -26,7 +26,7 @@ export function ExcelViewer({ sheet, setSheet }: ExcelViewerProps) {
                 setIsLoading(true);
                 const token = localStorage.getItem("accessToken");
 
-                const response = await fetch(`/api/reports/csv-raw?sheet=${encodeURIComponent(sheet)}`, {
+                const response = await fetch(`/app-connectivity/api/reports/csv-raw?sheet=${encodeURIComponent(sheet)}`, {
                     headers: token
                         ? {
                             Authorization: `Bearer ${token}`,

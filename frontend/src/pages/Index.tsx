@@ -33,7 +33,7 @@ const Index = () => {
       toast.success(`Uploading ${file.name}...`);
       const token = localStorage.getItem("accessToken");
 
-      const response = await fetch("/api/reports/upload", {
+      const response = await fetch("/app-connectivity/api/reports/upload", {
         method: "POST",
         headers: token
           ? {
@@ -62,7 +62,7 @@ const Index = () => {
 
   const handleDownload = (format: 'csv' | 'xlsx') => {
     const link = document.createElement("a");
-    link.href = `/api/reports/download/${format}?sheet=${sheet}`;
+    link.href = `/app-connectivity/api/reports/download/${format}?sheet=${sheet}`;
     link.download = `${sheet}_report.${format}`;
     document.body.appendChild(link);
     link.click();
